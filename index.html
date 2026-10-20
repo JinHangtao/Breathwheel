@@ -2,11 +2,15 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>呼吸宇宙 · 生成式曼陀罗</title>
 <style>
-  html, body { margin:0; height:100%; overflow:hidden; background:#000; touch-action:none; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
-  canvas { display:block; width:100vw; height:100vh; opacity:0; transition:opacity 3s ease; }
+  html, body { margin:0; height:100%; overflow:hidden; background:#000; touch-action:none; overscroll-behavior:none; -webkit-touch-callout:none; -webkit-text-size-adjust:100%; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
+  canvas { display:block; position:fixed; left:0; top:0; width:100%; height:100vh; height:100dvh; opacity:0; transition:opacity 3s ease; }
   canvas.on { opacity:1; }
   #enter { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;
     color:rgba(255,236,205,.85); font:300 15px/1 system-ui, -apple-system, "PingFang SC", sans-serif; letter-spacing:.6em; text-indent:.6em;
@@ -18,7 +22,7 @@
   #hint {
     position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
     color:rgba(255,236,205,.55); font:300 12px/1 system-ui, -apple-system, "PingFang SC", sans-serif;
-    letter-spacing:.35em; pointer-events:none; transition:opacity 3s; white-space:nowrap; opacity:0;
+    letter-spacing:.35em; pointer-events:none; transition:opacity 3s; white-space:normal; text-align:center; width:max-content; max-width:calc(100vw - 140px); line-height:2; opacity:0;
   }
   :root { --ac:255,236,205; --ease:cubic-bezier(.22,1,.36,1); --spring:cubic-bezier(.34,1.56,.64,1); }
   #mus { position:fixed; top:calc(16px + env(safe-area-inset-top,0px)); right:calc(16px + env(safe-area-inset-right,0px)); z-index:5; --lv:0;
@@ -123,6 +127,27 @@
   #micB[data-s=on] .sl, #micB[data-s=cal] .sl { opacity:0; }
   #micB[data-s=cal] { color:rgb(var(--ac)); animation:micc 1s ease-in-out infinite; }
   @keyframes micc { 0%,100% { opacity:.4; } 50% { opacity:1; } }
+  /* ===== 触屏 / 小屏适配 ===== */
+  @media (pointer:coarse) {
+    #mus .swap { height:40px; }
+    #mus.has .swap { width:40px; margin-left:2px; }
+    #mus .seek { height:30px; }
+    #mus .seek .ln, #mus .seek:hover .ln { top:14px; }
+    #hint { letter-spacing:.2em; font-size:12px; }
+  }
+  @media (max-width:480px) {
+    #hint { letter-spacing:.12em; font-size:11px; max-width:calc(100vw - 128px); bottom:calc(22px + env(safe-area-inset-bottom, 0px)); }
+    #enter { letter-spacing:.5em; text-indent:.5em; }
+    #mus .txt { width:132px; }
+  }
+  @media (max-height:480px) {
+    #hint { bottom:calc(12px + env(safe-area-inset-bottom, 0px)); }
+    #mus { top:calc(10px + env(safe-area-inset-top,0px)); }
+    #micB { bottom:calc(10px + env(safe-area-inset-bottom,0px)); }
+  }
+  @media (min-width:700px) and (pointer:coarse) {
+    #hint { font-size:13px; }
+  }
   @media (prefers-reduced-motion:reduce) { #mus *, #mus, #drop, #drop * { animation-duration:.01ms !important; transition-duration:.01ms !important; transition-delay:0s !important; } }
 </style>
 </head>
@@ -155,6 +180,10 @@
 <script>
 (function(){
   const canvas = document.getElementById('c');
+  const COARSE = matchMedia('(pointer:coarse)').matches || matchMedia('(hover:none)').matches;   // 触屏设备：手机 / 平板
+  const BT = COARSE ? 3 : 6;                                                                    // 泛光采样数：触屏减半，省电省 GPU
+  if (COARSE) document.getElementById('hint').textContent = '轻点 唤出按钮 · 再点 转换 · 按住 呼吸 · 双指滑动 变换视角 · 点麦克风 用声音呼吸';
+  document.addEventListener('gesturestart', e => e.preventDefault());                           // 禁止 iOS 双指缩放页面
   const gl = canvas.getContext('webgl', {antialias:false, powerPreference:'high-performance'});
   if (!gl) { document.body.innerHTML = '<p style="color:#fff;font-family:sans-serif;padding:20px">你的浏览器不支持 WebGL</p>'; return; }
 
@@ -515,18 +544,18 @@
     // —— 泛光：把亮处的丝线晕成柔和的光（两圈采样，角度带轻微抖动，混入胶片颗粒里不显脏）——
     {
       vec2 asp2 = vec2(mn / u_res.x, mn / u_res.y);
-      float a0 = (hash(fc * .37 + 1.3) - .5) * 1.0472;
+      float a0 = (hash(fc * .37 + 1.3) - .5) * ${(6.28318 / BT).toFixed(4)};
       vec3 bl = vec3(0.);
       float lm0 = dot(col, vec3(.299, .587, .114));
-      for (int i = 0; i < 6; i++) {
-        float th = a0 + float(i) * 1.0472;
+      for (int i = 0; i < ${BT}; i++) {
+        float th = a0 + float(i) * ${(6.28318 / BT).toFixed(4)};
         vec2 o = vec2(cos(th), sin(th)) * asp2;
         vec3 s1 = texture2D(u_tex, uv + o * .010).rgb;
         vec3 s2 = texture2D(u_tex, uv + o * .021).rgb;
         bl += s1 * smoothstep(.62, 1.0, dot(s1, vec3(.299, .587, .114))) * .55
             + s2 * smoothstep(.55, 1.0, dot(s2, vec3(.299, .587, .114))) * .40;
       }
-      col += bl * (u_glow * .65 / 6.) * (1. - smoothstep(.35, .75, lm0));   // 已经很亮的地方不再叠加，避免中心过曝
+      col += bl * (u_glow * .65 / ${BT}.) * (1. - smoothstep(.35, .75, lm0));   // 已经很亮的地方不再叠加，避免中心过曝
     }
     // —— 微尘：两层缓慢漂移、各自闪烁的细小光点，补足画面边缘的纵深 ——
     {
@@ -573,8 +602,10 @@
     return {tex, fbo};
   }
 
-  const DPR = () => Math.min(window.devicePixelRatio || 1, 1.5);
-  const RSL = [.8, .68, .58, .5]; let RSI = 0, RS = RSL[0], TW = 2, TH = 2, perfEma = .0167, lastDrop = 0;
+  // 触屏设备限制总像素数（约 115 万）：手机 / 平板 GPU 带不动 3× 屏的全分辨率，帧率比锐度更重要
+  const MAXPX = COARSE ? 1.15e6 : 1e9;
+  const DPR = () => { const b = Math.min(window.devicePixelRatio || 1, 1.5), px = innerWidth * innerHeight * b * b; return px > MAXPX ? b * Math.sqrt(MAXPX / px) : b; };
+  const RSL = [.8, .68, .58, .5]; let RSI = COARSE ? 1 : 0, RS = RSL[COARSE ? 1 : 0], TW = 2, TH = 2, perfEma = .0167, lastDrop = 0;
   function resize(){
     canvas.width  = Math.floor(innerWidth  * DPR());
     canvas.height = Math.floor(innerHeight * DPR());
@@ -583,7 +614,13 @@
     TW = Math.max(2, Math.floor(canvas.width * RS)); TH = Math.max(2, Math.floor(canvas.height * RS));
     T[0] = makeTarget(TW, TH); T[1] = makeTarget(TW, TH);
   }
-  addEventListener('resize', resize); resize();
+  // 手机地址栏收起 / 展开、横竖屏切换会连发 resize：合并成一次，并且尺寸真的变了才重建缓冲
+  let rzT = 0, rzW = 0, rzH = 0;
+  const rzSoon = () => { clearTimeout(rzT); rzT = setTimeout(() => { if (innerWidth !== rzW || innerHeight !== rzH) { rzW = innerWidth; rzH = innerHeight; resize(); } }, 140); };
+  addEventListener('resize', rzSoon);
+  addEventListener('orientationchange', () => setTimeout(rzSoon, 260));
+  if (window.visualViewport) visualViewport.addEventListener('resize', rzSoon);
+  rzW = innerWidth; rzH = innerHeight; resize();
 
   // ============ 声音引擎：纯合成 · 随机游走 · 不可预测 ============
   let pulse = 0, pAge = 9;
@@ -913,7 +950,7 @@
       sx.x = dotP.x = target.x; sy.x = dotP.y = target.y;
     }
   }
-  addEventListener('pointermove', e => setPointer(e.clientX, e.clientY));
+  addEventListener('pointermove', e => { if (gesture) return; setPointer(e.clientX, e.clientY); });   // 双指手势中不再让光点在两指间跳
   let pressTimer = 0, pDownT = 0, lastHoldMs = 0;   // 按住时长：用来驱动「吸气」，并避免长按松手时误触发切换场景
   addEventListener('pointerdown', e => { pDownT = performance.now(); setPointer(e.clientX, e.clientY); clearTimeout(pressTimer); pressTimer = setTimeout(() => { pressT = .85; }, 90); });
   const release = e => { clearTimeout(pressTimer); pressT = 0; if (pDownT) { lastHoldMs = performance.now() - pDownT; pDownT = 0; setTimeout(() => { lastHoldMs = 0; }, 80); } if (e.pointerType === 'touch') inside = false; };
@@ -922,6 +959,9 @@
   document.addEventListener('mouseout', e => { if (!e.relatedTarget) inside = false; });
   addEventListener('blur', () => { inside = false; pressT = 0; pDownT = 0; });
   const toggle = () => { modeT = modeT > .5 ? 0 : 1; AE.setMode(modeT); emit(.95); lastEmitT = performance.now() / 1000; };
+  let wake = null;
+  const keepAwake = async () => { try { if ('wakeLock' in navigator && !wake) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); } } catch (e) {} };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && AE.on()) keepAwake(); });
   let uiT = 0, uiHover = false;
   const uiFadeCheck = () => { if (uiHover || musUI.classList.contains('open')) { uiT = setTimeout(uiFadeCheck, 1200); return; } document.body.classList.remove('ui'); };
   const uiShow = ms => { document.body.classList.add('ui'); clearTimeout(uiT); uiT = setTimeout(uiFadeCheck, ms || 4200); };
@@ -933,7 +973,7 @@
     if (chainN === 0 || now - lastSpawnT > .3) { if (spawnRipple(dotP.x, dotP.y, -.18, chainN > 0)) lastSpawnT = now; }
     if (!AE.on()) {
       setTimeout(() => emit(.9), 220);
-      AE.start();
+      AE.start(); keepAwake();
       document.getElementById('enter').classList.add('gone'); document.body.classList.remove('pre'); document.getElementById('mus').classList.add('show'); document.getElementById('micB').classList.add('show'); setTimeout(() => poke(7800), 600);
       const h = document.getElementById('hint'); h.style.opacity = '.55';
       setTimeout(() => { h.style.opacity = '0'; }, 8000);
@@ -955,6 +995,22 @@
     dy = Math.max(-150, Math.min(150, dy));
     depthT += dy * .004;
   }, {passive: false});
+
+  // 触屏没有滚轮：双指上下滑 / 捏合，等同滚轮，用来变换视角与环境
+  const tp = new Map(); let gMidY = 0, gDist = 0, gesture = false;
+  const gStat = () => { const a = [...tp.values()]; return {my: (a[0].y + a[1].y) / 2, d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y)}; };
+  addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'touch') return;
+    tp.set(e.pointerId, {x: e.clientX, y: e.clientY});
+    if (tp.size === 2) { gesture = true; const s = gStat(); gMidY = s.my; gDist = s.d; clearTimeout(pressTimer); pressT = 0; pDownT = 0; lastHoldMs = 0; }   // 第二根手指落下：取消「吸气」
+  });
+  addEventListener('pointermove', e => {
+    if (e.pointerType !== 'touch' || !tp.has(e.pointerId)) return;
+    tp.set(e.pointerId, {x: e.clientX, y: e.clientY});
+    if (tp.size === 2) { const s = gStat(); depthT += (gMidY - s.my) * .008 + (gDist - s.d) * .006; gMidY = s.my; gDist = s.d; }
+  });
+  const gEnd = e => { if (e.pointerType !== 'touch') return; tp.delete(e.pointerId); if (tp.size < 2) gesture = false; };
+  addEventListener('pointerup', gEnd); addEventListener('pointercancel', gEnd);
   addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('#mus')) return;
     if (e.code === 'Space'){ e.preventDefault(); act(); }
