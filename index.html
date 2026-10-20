@@ -110,6 +110,12 @@
     visibility:hidden; opacity:0; transform:scale(.9); transition:opacity .5s, transform .5s var(--spring), color .5s, visibility 0s .5s; }
   #micB.show { visibility:visible; opacity:1; transform:none; transition:opacity 1.8s var(--ease) .3s, transform .5s var(--spring), color .5s; }
   #micB:active { transform:scale(.9); transition-duration:.15s; }
+  /* 按钮默认隐去：点击画面浮现，无操作数秒后淡出；鼠标停在按钮上或音乐胶囊展开时保持 */
+  body:not(.ui) #mus { pointer-events:none; }
+  body:not(.ui) #mus.show .cap { opacity:0; transform:translateY(-8px) scale(.94); transition:grid-template-columns 1s var(--ease), opacity 1.4s var(--ease), transform 1.4s var(--ease); }
+  body:not(.ui) #micB.show { opacity:0; transform:translateY(8px) scale(.9); pointer-events:none; transition:opacity 1.4s var(--ease), transform 1.4s var(--ease), color .5s; }
+  body.ui #mus.show .cap { transition:grid-template-columns 1s var(--ease), opacity .7s var(--ease), transform .7s var(--ease); }
+  body.ui #micB.show { transition:opacity .7s var(--ease), transform .5s var(--spring), color .5s; }
   #micB:focus-visible { box-shadow:inset 0 0 0 1.5px rgba(var(--ac),.6); }
   #micB svg { position:absolute; left:13px; top:13px; width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round; }
   #micB .sl { transition:opacity .4s; }
@@ -123,7 +129,7 @@
 <body class="pre">
 <canvas id="c"></canvas>
 <div id="enter"><span>进 入</span><small>建议佩戴耳机</small></div>
-<div id="hint">移动 · 滚轮 变换视角 · 点击 / 空格 转换 · 按住 呼吸 · V 麦克风 · 拖入音乐 · M 静音</div>
+<div id="hint">移动 · 滚轮 变换视角 · 点击 唤出按钮 · 再点 / 空格 转换 · 按住 呼吸 · V 麦克风 · 拖入音乐 · M 静音</div>
 <div id="mus" data-s="idle" role="group" aria-label="音乐">
   <div class="cap">
     <button class="orb" id="musB" type="button" aria-label="载入 / 播放 / 暂停">
@@ -246,11 +252,14 @@
     vec3 col = base;
     col += tint * soft * body;
     col += line * fine * (.25 + .85 * body) * (.55 + .45 * br);
+    float glint = pow(cont, 64.) * pow(.5 + .5 * sin(f * 53. + t * 2.3), 6.);   // 丝线峰值处细碎闪烁，像金属反光
+    col += line * glint * (.35 + .6 * u_voice + .3 * lift);
 
     // 中心光芯 + 呼吸光晕
     float core = exp(-rr * 7.) * (.55 + .45 * br + .5 * u_low + .9 * u_voice) * (.85 + .3 * e2);
     float halo = .014 / (rr * rr + .02) * (.5 + .5 * br);
     col += mix(vec3(1., .82, .58), vec3(.8, 1., .95), mode) * (core + halo * .6);
+    col += mix(vec3(.9, .5, .22), vec3(.15, .65, .6), mode) * .028 * exp(-rr * 2.6) * (.55 + .45 * br + .7 * u_voice);   // 中心氤氲：有体积的光，而不是一个点
 
     // 径向光环（极细）
     float ring = pow(.5 + .5 * cos(rr * 24. - t * 1.5 + f * 3.), 40.) * exp(-rr * 2.2);
@@ -441,7 +450,7 @@
   const fsPresent = `
   precision highp float;
   #define TAU 6.28318530718
-  uniform sampler2D u_tex; uniform vec2 u_res; uniform float u_time, u_fade, u_base, u_mode;
+  uniform sampler2D u_tex; uniform vec2 u_res; uniform float u_time, u_fade, u_base, u_mode, u_glow;
   uniform vec4 u_em[5];
   uniform vec4 u_cb;   // 四角呼吸 (左上, 右上, 右下, 左下)，相位依次错开 1/4 周期
   #define BL4(v) mix(mix(v.w, v.z, uv.x), mix(v.x, v.y, uv.x), uv.y)
@@ -503,7 +512,40 @@
       col *= mix(vec3(1.), warm, cA * .6);
       col += vec3(.004, .003, .008) * cA;
     }
+    // —— 泛光：把亮处的丝线晕成柔和的光（两圈采样，角度带轻微抖动，混入胶片颗粒里不显脏）——
+    {
+      vec2 asp2 = vec2(mn / u_res.x, mn / u_res.y);
+      float a0 = (hash(fc * .37 + 1.3) - .5) * 1.0472;
+      vec3 bl = vec3(0.);
+      float lm0 = dot(col, vec3(.299, .587, .114));
+      for (int i = 0; i < 6; i++) {
+        float th = a0 + float(i) * 1.0472;
+        vec2 o = vec2(cos(th), sin(th)) * asp2;
+        vec3 s1 = texture2D(u_tex, uv + o * .010).rgb;
+        vec3 s2 = texture2D(u_tex, uv + o * .021).rgb;
+        bl += s1 * smoothstep(.62, 1.0, dot(s1, vec3(.299, .587, .114))) * .55
+            + s2 * smoothstep(.55, 1.0, dot(s2, vec3(.299, .587, .114))) * .40;
+      }
+      col += bl * (u_glow * .65 / 6.) * (1. - smoothstep(.35, .75, lm0));   // 已经很亮的地方不再叠加，避免中心过曝
+    }
+    // —— 微尘：两层缓慢漂移、各自闪烁的细小光点，补足画面边缘的纵深 ——
+    {
+      vec3 dcol = mix(vec3(1., .82, .58), vec3(.7, 1., .92), u_mode);
+      float lm = dot(col, vec3(.299, .587, .114)), dust = 0.;
+      for (int L = 0; L < 2; L++) {
+        float fl = float(L);
+        vec2 gp = p * (34. - 17. * fl) + vec2(fl * 7.3, -u_time * (.06 - .03 * fl));
+        vec2 id = floor(gp), fr = fract(gp) - .5;
+        float h = hash(id + fl * 13.1);
+        vec2 off = (vec2(hash(id + 3.1), hash(id + 7.7)) - .5) * .6;
+        vec2 dd = fr - off;
+        float tw = .5 + .5 * sin(u_time * (.7 + h * 1.8) + h * 60.);
+        dust += step(.955, h) * exp(-dot(dd, dd) * (260. - 170. * fl)) * tw * (1. - .4 * fl);
+      }
+      col += dcol * dust * (.10 + .10 * u_glow) * (1. - clamp(lm * 1.5, 0., 1.)) * (.4 + .6 * smoothstep(.15, .7, r));
+    }
     col += (hash(fc + fract(u_time) * 100.) - .5) * .028;
+    col = min(col, vec3(.82)) + .18 * (1. - exp(-max(col - .82, 0.) / .18));   // 高光软过渡：亮处不再被硬生生削平成纯白
     gl_FragColor = vec4(col * u_fade, 1.);
   }`;
   const fsP = sh(gl.FRAGMENT_SHADER, fsPresent);
@@ -511,7 +553,7 @@
   gl.attachShader(progP, vs); gl.attachShader(progP, fsP); gl.bindAttribLocation(progP, 0, 'a'); gl.linkProgram(progP);
   if (!gl.getProgramParameter(progP, gl.LINK_STATUS)) { console.error(gl.getProgramInfoLog(progP)); return; }
   const UP = {};
-  ['u_tex','u_res','u_time','u_fade','u_em','u_base','u_mode','u_cb'].forEach(n => UP[n] = gl.getUniformLocation(progP, n));
+  ['u_tex','u_res','u_time','u_fade','u_em','u_base','u_mode','u_cb','u_glow'].forEach(n => UP[n] = gl.getUniformLocation(progP, n));
 
   // 乒乓缓冲：上一帧用于时间虚化
   const T = [null, null]; let ti = 0;
@@ -880,7 +922,10 @@
   document.addEventListener('mouseout', e => { if (!e.relatedTarget) inside = false; });
   addEventListener('blur', () => { inside = false; pressT = 0; pDownT = 0; });
   const toggle = () => { modeT = modeT > .5 ? 0 : 1; AE.setMode(modeT); emit(.95); lastEmitT = performance.now() / 1000; };
-  const act = () => {
+  let uiT = 0, uiHover = false;
+  const uiFadeCheck = () => { if (uiHover || musUI.classList.contains('open')) { uiT = setTimeout(uiFadeCheck, 1200); return; } document.body.classList.remove('ui'); };
+  const uiShow = ms => { document.body.classList.add('ui'); clearTimeout(uiT); uiT = setTimeout(uiFadeCheck, ms || 4200); };
+  const act = ev => {
     if (AE.on() && lastHoldMs > 300) { lastHoldMs = 0; return; }   // 长按是在呼吸，松手不算点击
     const now = performance.now() / 1000;
     chainN = now - lastClickT < 1.1 ? chainN + 1 : 0; lastClickT = now;   // 1.1 秒内的连续点击算同一串
@@ -894,6 +939,7 @@
       setTimeout(() => { h.style.opacity = '0'; }, 8000);
       return;
     }
+    if (ev && ev.type === 'click') { const was = document.body.classList.contains('ui'); uiShow(); if (!was) return; }   // 按钮隐着时：这一下只负责唤出按钮
     if (chainN === 0) setTimeout(toggle, 260);                             // 一串点击只切换一次模式，不再来回翻转
     else if (now - lastEmitT > 1.8) { emit(.4 + .35 * combo); lastEmitT = now; }   // 其余点击化为越来越亮的柔和光环
   };
@@ -954,7 +1000,7 @@
   }
   const say = (k, x, ms) => { override = {k, x, until: performance.now() + ms}; };
   const setState = s => { if (musUI.dataset.s !== s) musUI.dataset.s = s; };
-  function poke(ms){ musUI.classList.add('open'); clearTimeout(openT); openT = setTimeout(() => musUI.classList.remove('open'), ms || 5200); }
+  function poke(ms){ uiShow((ms || 5200) + 800); musUI.classList.add('open'); clearTimeout(openT); openT = setTimeout(() => musUI.classList.remove('open'), ms || 5200); }
 
   AE.hooks.fade = () => say('fade', '原声渐隐', 8500);
   AE.hooks.back = () => { say('end', '原声归来', 5000); poke(5200); };
@@ -995,6 +1041,10 @@
   [musUI, musF].forEach(n => ['pointerdown', 'click'].forEach(ev => n.addEventListener(ev, e => e.stopPropagation())));
   musUI.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') { musUI.classList.add('open'); clearTimeout(openT); } });
   musUI.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') poke(1600); });
+  [musUI, byId('micB')].forEach(n => {
+    n.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') { uiHover = true; uiShow(); } });
+    n.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') { uiHover = false; uiShow(1800); } });
+  });
   orb.addEventListener('pointerdown', e => { lastPT = e.pointerType; });
   orb.addEventListener('click', e => {
     e.currentTarget.blur();
@@ -1141,6 +1191,7 @@
   }
 
   async function hb_toggleMic(){
+    uiShow(3200);
     if (!AE.on()) { hb_toast('先点击进入，再开启麦克风'); return; }
     const r = await AE.micToggle();
     if (r === 'on') hb_toast('麦克风已开启 · 先安静一秒校准 · 建议佩戴耳机', 5200);
@@ -1295,6 +1346,7 @@
     gl.uniform1i(UP.u_tex, 0);
     gl.uniform2f(UP.u_res, W, H);
     gl.uniform1f(UP.u_time, time);
+    gl.uniform1f(UP.u_glow, Math.min(1.6, .38 + .22 * breath + .9 * voiceV + .25 * env.low));
     gl.uniform1f(UP.u_fade, fade * fade * (3 - 2 * fade));
     gl.uniform4fv(UP.u_em, emBuf); gl.uniform1f(UP.u_base, postBase); gl.uniform1f(UP.u_mode, modeV); gl.uniform4fv(UP.u_cb, cb);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
