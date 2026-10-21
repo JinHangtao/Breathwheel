@@ -1,6 +1,6 @@
 <div align="center">
 
-# Breathing Cosmos
+# Breathwheel
 
 **A generative mandala that breathes with you.**
 
