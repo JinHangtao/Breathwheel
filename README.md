@@ -6,7 +6,7 @@
 
 Real-time light, sound and space — all synthesized in your browser.
 
-[**Enter the cosmos →**](https://YOUR-USERNAME.github.io/breathing-cosmos/) &nbsp;·&nbsp; Headphones recommended
+[**Enter the cosmos →**](https://jinhangtao.github.io/Breathwheel/) &nbsp;·&nbsp; Headphones recommended
 
 </div>
 
