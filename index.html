@@ -423,7 +423,7 @@
     // 极点（曼陀罗中心 / 漩涡喉口）在屏幕上的位置：随镜头转动而移动；光扩散以它为圆心，而不是固定在屏幕正中
     vec3 rcp = vec3(-u_cam[0].z, -u_cam[1].z, -u_cam[2].z);
     float pvis = 1. - smoothstep(-.35, 0., rcp.z);
-    vec2 pp = rcp.xy / min(-rcp.z, -.02) * u_foc;
+    vec2 pp = rcp.xy / max(-rcp.z, .02) * u_foc;
     vec2 cc = (frag - .5 * u_res) / mn - pp * pvis;
     float ccr = length(cc);
     vec3 emL = vec3(0.);
@@ -1702,7 +1702,7 @@
     const cs = camStep(dt, real, W, H, mn, breath);
     const fbAmt = Math.max(fbAmt0, cs.fb);
     const rcz = -camBuf[8], pvJ = (() => { const x = Math.max(0, Math.min(1, (rcz + .35) / .35)); return 1 - x * x * (3 - 2 * x); })();
-    const poleX = -camBuf[2] * pvJ * cam.foc / Math.min(-rcz, -.02), poleY = -camBuf[5] * pvJ * cam.foc / Math.min(-rcz, -.02);
+    const poleX = -camBuf[2] * pvJ * cam.foc / Math.max(-rcz, .02), poleY = -camBuf[5] * pvJ * cam.foc / Math.max(-rcz, .02);
 
     gl.uniform2f(U.u_res, W, H);
     gl.uniform1f(U.u_time, time);
