@@ -224,6 +224,7 @@
   uniform vec4  u_sk[4];   // 萤火: x, y, 锐度, 亮度
   uniform float u_hue;     // 棱镜偏色事件
   uniform vec4  u_em[5];   // 中心扩散: 半径, 光环强度, 后期强度, 中心柔光包络
+  uniform vec3  u_emC[5];  // 每圈光环的中心（激发那一刻锁定的屏幕位置）xy + 当时极点可见度 z
   uniform mat3  u_cam;     // 镜头朝向（列向量 = 右 / 上 / 后）
   uniform float u_foc;     // 焦距：越小视野越广
   uniform vec3  u_cpos;    // 镜头位置微摆：给星尘层真正的视差
@@ -424,13 +425,15 @@
     vec3 rcp = vec3(-u_cam[0].z, -u_cam[1].z, -u_cam[2].z);
     float pvis = 1. - smoothstep(-.35, 0., rcp.z);
     vec2 pp = rcp.xy / max(-rcp.z, .02) * u_foc;
-    vec2 cc = (frag - .5 * u_res) / mn - pp * pvis;
-    float ccr = length(cc);
+    vec2 cs0 = (frag - .5 * u_res) / mn;
     vec3 emL = vec3(0.);
     float emW = 0., emF = 0., emE = 0.;
     for (int j = 0; j < 5; j++) {
       vec4 E = u_em[j];
       if (E.y < .003 && E.w < .003) continue;
+      vec3 EC = u_emC[j];
+      vec2 cc = cs0 - EC.xy;          // 光环中心固定在激发时的屏幕位置，之后不再随视角移动
+      float ccr = length(cc);
       float wv = ccr - E.x;
       float kw = 46. / (1. + 2.4 * E.x);                     // 越往外环越宽越柔
       float fr = exp(-wv * wv * kw);
@@ -438,11 +441,11 @@
       sp -= cc / sqrt(ccr * ccr + .004) * (fr * .04 + wk * .012) * E.y;   // 中心处不再有方向突变
       float d1 = ccr - E.x * .955, d2 = ccr - E.x * 1.045;
       emL += vec3(exp(-d1 * d1 * kw), fr, exp(-d2 * d2 * kw)) * E.y;       // 红内蓝外：棱镜色散
-      emW += wk * E.y;
+      emW += wk * E.y * EC.z;
       emE += E.w;
       // 中心柔光：宽高斯，随环外扩缓缓散开、变淡
       float sp2 = 1. + 1.6 * E.x;
-      emF += (.7 * exp(-ccr * ccr * 16. / (sp2 * sp2)) + .3 * exp(-ccr * ccr * 4.5 / sp2)) * E.w;
+      emF += (.7 * exp(-ccr * ccr * 16. / (sp2 * sp2)) + .3 * exp(-ccr * ccr * 4.5 / sp2)) * E.w * EC.z;
     }
 
     // —— 轨迹：扫过的丝线被点亮，随时间熄灭 ——
@@ -563,7 +566,7 @@
       float d2 = dot(dk, dk);
       col += lc * (exp(-d2 * K.z) * 1.1 + exp(-d2 * K.z * .05) * .10) * K.w;
     }
-    col += emL * mix(lc, vec3(1.), .5) * .30 + lc * (emW * .05 + emF * .5) * pvis;
+    col += emL * mix(lc, vec3(1.), .5) * .30 + lc * (emW * .05 + emF * .5);
     col += mix(lc, lc.gbr * .6 + .4, clamp(rtint.x, 0., 1.)) * rl;
 
     // 3D 受光：近指针一侧略亮、远侧略沉，像一面有厚度的玻璃
@@ -645,7 +648,7 @@
   gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
   const U = {};
-  ['u_res','u_time','u_mouse','u_par','u_vel','u_presence','u_press','u_speed','u_trail','u_rc','u_rp','u_rq','u_rr','u_breath','u_mode','u_depth','u_fb','u_fbZoom','u_fbRot','u_prev','u_low','u_mid','u_high','u_voice','u_pulse','u_pAge','u_em','u_rs','u_sw','u_sk','u_hue','u_cam','u_foc','u_cpos','u_fbShift','u_dolly','u_zv','u_eth'].forEach(n => U[n] = gl.getUniformLocation(prog, n));
+  ['u_res','u_time','u_mouse','u_par','u_vel','u_presence','u_press','u_speed','u_trail','u_rc','u_rp','u_rq','u_rr','u_breath','u_mode','u_depth','u_fb','u_fbZoom','u_fbRot','u_prev','u_low','u_mid','u_high','u_voice','u_pulse','u_pAge','u_em','u_rs','u_sw','u_sk','u_hue','u_cam','u_foc','u_cpos','u_fbShift','u_dolly','u_zv','u_eth','u_emC'].forEach(n => U[n] = gl.getUniformLocation(prog, n));
 
 
   const fsPresent = `
@@ -654,7 +657,7 @@
   uniform sampler2D u_tex; uniform vec2 u_res; uniform float u_time, u_fade, u_base, u_mode, u_glow;
   uniform vec4 u_em[5];
   uniform vec4 u_cb;   // 四角呼吸 (左上, 右上, 右下, 左下)，相位依次错开 1/4 周期
-  uniform vec2 u_pole; // 曼陀罗极点（喉口）在屏幕上的位置，单位同 p
+  uniform vec3 u_emC[5]; // 每圈光环锁定的中心（单位同 p）
   #define BL4(v) mix(mix(v.w, v.z, uv.x), mix(v.x, v.y, uv.x), uv.y)
   float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
   mat2 rot(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
@@ -693,7 +696,7 @@
     float A = u_base * gc * w;
     for (int i = 0; i < 5; i++) {
       vec4 E = u_em[i];
-      float rpl = length(p - u_pole);
+      float rpl = length(p - u_emC[i].xy);
       float band = exp(-(rpl - E.x) * (rpl - E.x) * 10.);
       A += E.z * w * (.5 + .5 * gc) + E.y * band * .3;
     }
@@ -774,7 +777,7 @@
   gl.attachShader(progP, vs); gl.attachShader(progP, fsP); gl.bindAttribLocation(progP, 0, 'a'); gl.linkProgram(progP);
   if (!gl.getProgramParameter(progP, gl.LINK_STATUS)) { console.error(gl.getProgramInfoLog(progP)); return; }
   const UP = {};
-  ['u_tex','u_res','u_time','u_fade','u_em','u_base','u_mode','u_cb','u_glow','u_pole'].forEach(n => UP[n] = gl.getUniformLocation(progP, n));
+  ['u_tex','u_res','u_time','u_fade','u_em','u_base','u_mode','u_cb','u_glow','u_emC'].forEach(n => UP[n] = gl.getUniformLocation(progP, n));
 
   // 乒乓缓冲：上一帧用于时间虚化
   const T = [null, null]; let ti = 0;
@@ -902,7 +905,9 @@
       const comp = ctx.createDynamicsCompressor();
       an = ctx.createAnalyser(); an.fftSize = 1024; an.smoothingTimeConstant = .55;
       bins = new Uint8Array(an.frequencyBinCount);
-      master.connect(comp); comp.connect(ctx.destination); comp.connect(an);
+      const outG = ctx.createGain(); outG.gain.value = 1.8;          // 整体音量 +5dB（在分析器之后，不影响画面对声音的反应）
+      const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -3; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = .003; lim.release.value = .15;   // 限幅：大声时不爆音
+      master.connect(comp); comp.connect(an); comp.connect(outG); outG.connect(lim); lim.connect(ctx.destination);
       synthOut = ctx.createGain(); synthOut.connect(master);
       bus = ctx.createGain(); bus.connect(synthOut);
 
@@ -1122,10 +1127,12 @@
   // ============ 中心扩散：自动随呼吸 · 点击 / 转换 / 低音 触发 ============
   const EMN = 5, emBuf = new Float32Array(EMN * 4), emAge = [99, 99, 99, 99, 99], emStr = [0, 0, 0, 0, 0], emSpd = [.3, .3, .3, .3, .3];
   let emIdx = 0, lastBn = -1; const cb = new Float32Array(4);
+  const emC = new Float32Array(EMN * 3); let curPX = 0, curPY = 0, curPK = 1;   // emC：每圈光环的锁定中心；curP*：当前极点的屏幕位置
   function emit(str){
     let i = 0, oa = -1;
     for (let j = 0; j < EMN; j++) if (emAge[j] > oa) { oa = emAge[j]; i = j; }   // 复用最老的一圈
     emAge[i] = 0; emStr[i] = str; emSpd[i] = rnd(.26, .32) * (.92 + .16 * Math.min(str, 1));
+    emC[i*3] = curPX; emC[i*3+1] = curPY; emC[i*3+2] = curPK;   // 激发这一刻锁定位置
   }
 
   const TR = 12, trail = [];
@@ -1704,6 +1711,7 @@
     const rcz = -camBuf[8], pvJ = (() => { const x = Math.max(0, Math.min(1, (rcz + .35) / .35)); return 1 - x * x * (3 - 2 * x); })();
     const poleX = -camBuf[2] * pvJ * cam.foc / Math.max(-rcz, .02), poleY = -camBuf[5] * pvJ * cam.foc / Math.max(-rcz, .02);
 
+    curPX = poleX; curPY = poleY; curPK = pvJ;
     gl.uniform2f(U.u_res, W, H);
     gl.uniform1f(U.u_time, time);
     gl.uniform2f(U.u_mouse, sx.x, sy.x);
@@ -1723,7 +1731,7 @@
     gl.uniform1f(U.u_fbZoom, fbZoom + .006 * stallK);
     gl.uniform1f(U.u_fbRot, fbRot);
     gl.uniformMatrix3fv(U.u_cam, false, camBuf); gl.uniform1f(U.u_foc, cam.foc); gl.uniform3fv(U.u_cpos, cposBuf); gl.uniform1f(U.u_dolly, cam.dolly); gl.uniform1f(U.u_zv, cam.zv); gl.uniform1f(U.u_eth, cam.eth); gl.uniform2f(U.u_fbShift, cs.shx, cs.shy);
-    gl.uniform4fv(U.u_em, emBuf); gl.uniform1f(U.u_rs, RS);
+    gl.uniform4fv(U.u_em, emBuf); gl.uniform3fv(U.u_emC, emC); gl.uniform1f(U.u_rs, RS);
     gl.uniform4fv(U.u_sw, swBuf); gl.uniform4fv(U.u_sk, skBuf); gl.uniform1f(U.u_hue, hueV);
 
     // pass 1：场景 + 与上一帧混合 → 写入缓冲
@@ -1742,7 +1750,7 @@
     gl.uniform1f(UP.u_time, time);
     gl.uniform1f(UP.u_glow, Math.min(1.6, .38 + .22 * breath + .9 * voiceV + .25 * env.low));
     gl.uniform1f(UP.u_fade, fade * fade * (3 - 2 * fade));
-    gl.uniform2f(UP.u_pole, poleX, poleY);
+    gl.uniform3fv(UP.u_emC, emC);
     gl.uniform4fv(UP.u_em, emBuf); gl.uniform1f(UP.u_base, postBase); gl.uniform1f(UP.u_mode, modeV); gl.uniform4fv(UP.u_cb, cb);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.useProgram(prog);
