@@ -527,37 +527,7 @@
     vec3 coreC = mix(vec3(1., .82, .58), vec3(.8, 1., .95), u_mode);
     vec3 coolC = mix(vec3(.55, .70, 1.), vec3(1., .66, .86), u_mode);
 
-    // 喉口里的「另一个世界」：把曼陀罗的另一层反向、慢速、偏冷色地叠在口里，像透过虫洞看见彼岸。
-    // 只在喉口区域内计算；越靠近中心越暗，让光点保持干净
-    vec3 voidC = mix(vec3(.010, .007, .022), vec3(.004, .012, .022), u_mode);
-    vec3 beyond = voidC;
-    if (pvis > .01 && throat < .995) {
-      vec2 uv2 = pdir * (.24 + prr * 2.6);
-      vec3 inr = scene(uv2, 8., u_mode, -tt0 * 1.5 + 7., br, 0.);
-      float il = dot(inr, vec3(.30, .59, .11));
-      vec3 innerC = mix(inr, vec3(il) * mix(vec3(.55, .78, 1.45), vec3(1.4, .8, .95), u_mode), .62) * .50;
-      beyond += innerC * smoothstep(R0 * .12, R0 * .95, prr);
-    }
-    col = mix(beyond, col, mix(1., throat, pvis));
-
-    // 视界环：贴着喉口边缘的一圈细光，内侧偏暖、外侧偏冷（色散），亮度沿圆周不均匀，并有一处缓慢游走的高光
-    float Rr = R0 * 1.38, rngW = R0 * .17;
-    float ringN = .50 + .50 * noise(pdir * 2.2 + vec2(u_time * .07, 1.3));
-    float hot = .38 + .62 * pow(.5 + .5 * cos(pan - u_time * .22 + 1.3 * sin(u_time * .11)), 3.);
-    float ri = exp(-pow((prr - Rr * .965) / rngW, 2.));
-    float ro = exp(-pow((prr - Rr * 1.045) / (rngW * 1.35), 2.));
-    float rGlow = exp(-pow((prr - Rr) / (R0 * .9), 2.));
-    float ringE = (.55 + .45 * br + .5 * u_low + .6 * u_voice) * ringN * hot * pvis;
-    col += ringE * (coreC * ri * .20 + coolC * ro * .13 + coreC * rGlow * .028);
-
-    // 汇入的光丝：对数螺旋，沿旋转方向缓缓流向中心；相位被噪声扰乱，不规则、很淡
-    {
-      float lr = log(prr + .02);
-      float sph = pan * 9. + lr * 4.6 + u_time * .55 + (fbm(pdir * 1.3 + vec2(lr * .5, u_time * .04)) - .5) * 3.2;
-      float stk = pow(.5 + .5 * cos(sph), 7.);
-      float env = smoothstep(R0 * 1.15, R0 * 2.1, prr) * exp(-max(prr - R0 * 2.1, 0.) * 6.);
-      col += mix(coreC, coolC, .35) * stk * env * .085 * (.55 + .45 * br + .4 * u_low + .8 * u_voice) * pvis;
-    }
+    // （已移除：中心喉口 / 视界环 / 螺旋光丝）
 
     // 中心炫光（照搬最新文件）：光芯 + 呼吸光晕 + 氤氲，算在图案坐标里，所以随推拉缩放一起放大 / 缩小、虚化；
     // 喉口会把中心挖空，所以这里在挖空之后再叠加。点击扩散时流场被推开，炫光随之被拉伸。
