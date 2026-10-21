@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>呼吸宇宙 · 生成式曼陀罗</title>
+<title>Breathing Cosmos · Generative Mandala</title>
 <style>
   html, body { margin:0; height:100%; overflow:hidden; background:#000; touch-action:none; overscroll-behavior:none; -webkit-touch-callout:none; -webkit-text-size-adjust:100%; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
   canvas { display:block; position:fixed; left:0; top:0; width:100%; height:100vh; height:100dvh; opacity:0; transition:opacity 3s ease; }
@@ -16,13 +16,13 @@
     color:rgba(255,236,205,.85); font:300 15px/1 system-ui, -apple-system, "PingFang SC", sans-serif; letter-spacing:.6em; text-indent:.6em;
     cursor:pointer; transition:opacity 2.5s ease, visibility 2.5s; text-shadow:0 0 18px rgba(0,0,0,.9); }
   #enter span { animation:br 4.5s ease-in-out infinite; }
-  #enter small { font-size:11px; letter-spacing:.3em; opacity:.5; }
+  #enter small { font-size:11px; letter-spacing:.18em; opacity:.5; }
   #enter.gone { opacity:0; visibility:hidden; pointer-events:none; }
   @keyframes br { 0%,100% { opacity:.4; } 50% { opacity:1; } }
   #hint {
     position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
     color:rgba(255,236,205,.55); font:300 12px/1 system-ui, -apple-system, "PingFang SC", sans-serif;
-    letter-spacing:.35em; pointer-events:none; transition:opacity 3s; white-space:normal; text-align:center; width:max-content; max-width:calc(100vw - 140px); line-height:2; opacity:0;
+    letter-spacing:.14em; pointer-events:none; transition:opacity 3s; white-space:normal; text-align:center; width:max-content; max-width:calc(100vw - 140px); line-height:2; opacity:0;
   }
   :root { --ac:255,236,205; --ease:cubic-bezier(.22,1,.36,1); --spring:cubic-bezier(.34,1.56,.64,1); }
   #mus { position:fixed; top:calc(16px + env(safe-area-inset-top,0px)); right:calc(16px + env(safe-area-inset-right,0px)); z-index:5; --lv:0;
@@ -68,7 +68,7 @@
   #mus .ttl.ov { -webkit-mask-image:linear-gradient(90deg,transparent,#000 8px,#000 calc(100% - 14px),transparent); mask-image:linear-gradient(90deg,transparent,#000 8px,#000 calc(100% - 14px),transparent); }
   #mus .mq { display:inline-block; will-change:transform; }
   @keyframes mq { 0%,16% { transform:translateX(0); } 46%,62% { transform:translateX(var(--ov)); } 92%,100% { transform:translateX(0); } }
-  #mus .sub { font-size:10px; line-height:12px; letter-spacing:.22em; white-space:nowrap; overflow:hidden; color:rgba(var(--ac),.5); font-variant-numeric:tabular-nums; }
+  #mus .sub { font-size:10px; line-height:12px; letter-spacing:.05em; white-space:nowrap; overflow:hidden; color:rgba(var(--ac),.5); font-variant-numeric:tabular-nums; }
   #mus .eq { display:flex; align-items:center; gap:3px; height:16px; width:0; margin-left:0; opacity:0; overflow:hidden; transition:width .9s var(--ease), margin .9s var(--ease), opacity .7s; }
   #mus.has .eq { width:17px; margin-left:12px; opacity:1; }
   #mus .eq i { flex:none; width:2px; height:16px; border-radius:2px; background:rgba(var(--ac),.75); transform:scaleY(.16); }
@@ -102,8 +102,8 @@
   #drop .gl { width:56px; height:56px; border-radius:50%; display:grid; place-items:center; border:1px solid rgba(var(--ac),.4); background:rgba(var(--ac),.07); animation:dgl 3.2s ease-in-out infinite; }
   #drop .gl svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.3; stroke-linecap:round; stroke-linejoin:round; }
   @keyframes dgl { 0%,100% { transform:scale(1); box-shadow:0 0 0 0 rgba(var(--ac),.0); } 50% { transform:scale(1.07); box-shadow:0 0 34px 2px rgba(var(--ac),.22); } }
-  #drop b { font-weight:300; font-size:15px; letter-spacing:.6em; text-indent:.6em; }
-  #drop small { font-size:11px; letter-spacing:.3em; opacity:.5; margin-top:-8px; }
+  #drop b { font-weight:300; font-size:15px; letter-spacing:.2em; text-indent:.2em; }
+  #drop small { font-size:11px; letter-spacing:.15em; opacity:.5; margin-top:-8px; }
   #drop .tx { display:none; }
   body.pre #drop .t-pre, body:not(.pre):not(.hasm) #drop .t-new, body:not(.pre).hasm #drop .t-rep { display:block; }
   #micB { position:fixed; right:calc(16px + env(safe-area-inset-right,0px)); bottom:calc(16px + env(safe-area-inset-bottom,0px)); z-index:5; --ml:0;
@@ -112,18 +112,33 @@
     -webkit-backdrop-filter:blur(18px) saturate(1.5); backdrop-filter:blur(18px) saturate(1.5);
     box-shadow:inset 0 0 0 1px rgba(var(--ac),.15), inset 0 1px 0 rgba(255,255,255,.07), 0 10px 36px rgba(0,0,0,.38), 0 0 calc(8px + 34px*var(--ml)) rgba(var(--ac),calc(.35*var(--ml)));
     visibility:hidden; opacity:0; transform:scale(.9); transition:opacity .5s, transform .5s var(--spring), color .5s, visibility 0s .5s; }
+  #gyB { position:fixed; right:calc(70px + env(safe-area-inset-right,0px)); bottom:calc(16px + env(safe-area-inset-bottom,0px)); z-index:5; width:44px; height:44px; border-radius:50%; padding:0; margin:0; border:0; cursor:pointer; outline:none; -webkit-tap-highlight-color:transparent;
+    color:rgba(var(--ac),.5); background:linear-gradient(135deg,rgba(var(--ac),.10),rgba(var(--ac),.02) 60%),rgba(12,9,7,.34);
+    -webkit-backdrop-filter:blur(18px) saturate(1.5); backdrop-filter:blur(18px) saturate(1.5);
+    box-shadow:inset 0 0 0 1px rgba(var(--ac),.15), inset 0 1px 0 rgba(255,255,255,.07), 0 10px 36px rgba(0,0,0,.38);
+    display:none; visibility:hidden; opacity:0; transform:scale(.9); transition:opacity .5s, transform .5s var(--spring), color .5s, visibility 0s .5s; }
+  body.gyro-ok #gyB { display:block; }
   #micB.show { visibility:visible; opacity:1; transform:none; transition:opacity 1.8s var(--ease) .3s, transform .5s var(--spring), color .5s; }
+  #gyB.show { visibility:visible; opacity:1; transform:none; transition:opacity 1.8s var(--ease) .3s, transform .5s var(--spring), color .5s; }
   #micB:active { transform:scale(.9); transition-duration:.15s; }
+  #gyB:active { transform:scale(.9); transition-duration:.15s; }
   /* 按钮默认隐去：点击画面浮现，无操作数秒后淡出；鼠标停在按钮上或音乐胶囊展开时保持 */
   body:not(.ui) #mus { pointer-events:none; }
   body:not(.ui) #mus.show .cap { opacity:0; transform:translateY(-8px) scale(.94); transition:grid-template-columns 1s var(--ease), opacity 1.4s var(--ease), transform 1.4s var(--ease); }
   body:not(.ui) #micB.show { opacity:0; transform:translateY(8px) scale(.9); pointer-events:none; transition:opacity 1.4s var(--ease), transform 1.4s var(--ease), color .5s; }
+  body:not(.ui) #gyB.show { opacity:0; transform:translateY(8px) scale(.9); pointer-events:none; transition:opacity 1.4s var(--ease), transform 1.4s var(--ease), color .5s; }
   body.ui #mus.show .cap { transition:grid-template-columns 1s var(--ease), opacity .7s var(--ease), transform .7s var(--ease); }
   body.ui #micB.show { transition:opacity .7s var(--ease), transform .5s var(--spring), color .5s; }
+  body.ui #gyB.show { transition:opacity .7s var(--ease), transform .5s var(--spring), color .5s; }
   #micB:focus-visible { box-shadow:inset 0 0 0 1.5px rgba(var(--ac),.6); }
+  #gyB:focus-visible { box-shadow:inset 0 0 0 1.5px rgba(var(--ac),.6); }
   #micB svg { position:absolute; left:13px; top:13px; width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round; }
+  #gyB svg { position:absolute; left:13px; top:13px; width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round; }
   #micB .sl { transition:opacity .4s; }
+  #gyB .sl { transition:opacity .4s; }
   #micB[data-s=on] { color:rgb(var(--ac)); }
+  #gyB[data-s=on] { color:rgb(var(--ac)); }
+  #gyB[data-s=on] .sl { opacity:0; }
   #micB[data-s=on] .sl, #micB[data-s=cal] .sl { opacity:0; }
   #micB[data-s=cal] { color:rgb(var(--ac)); animation:micc 1s ease-in-out infinite; }
   @keyframes micc { 0%,100% { opacity:.4; } 50% { opacity:1; } }
@@ -133,17 +148,17 @@
     #mus.has .swap { width:40px; margin-left:2px; }
     #mus .seek { height:30px; }
     #mus .seek .ln, #mus .seek:hover .ln { top:14px; }
-    #hint { letter-spacing:.2em; font-size:12px; }
+    #hint { letter-spacing:.09em; font-size:12px; }
   }
   @media (max-width:480px) {
-    #hint { letter-spacing:.12em; font-size:11px; max-width:calc(100vw - 128px); bottom:calc(22px + env(safe-area-inset-bottom, 0px)); }
+    #hint { letter-spacing:.05em; font-size:11px; max-width:calc(100vw - 128px); bottom:calc(22px + env(safe-area-inset-bottom, 0px)); }
     #enter { letter-spacing:.5em; text-indent:.5em; }
     #mus .txt { width:132px; }
   }
   @media (max-height:480px) {
     #hint { bottom:calc(12px + env(safe-area-inset-bottom, 0px)); }
     #mus { top:calc(10px + env(safe-area-inset-top,0px)); }
-    #micB { bottom:calc(10px + env(safe-area-inset-bottom,0px)); }
+    #micB, #gyB { bottom:calc(10px + env(safe-area-inset-bottom,0px)); }
   }
   @media (min-width:700px) and (pointer:coarse) {
     #hint { font-size:13px; }
@@ -153,28 +168,29 @@
 </head>
 <body class="pre">
 <canvas id="c"></canvas>
-<div id="enter"><span>进 入</span><small>建议佩戴耳机</small></div>
-<div id="hint">移动 · 滚轮 变换视角 · 点击 唤出按钮 · 再点 / 空格 转换 · 按住 呼吸 · V 麦克风 · 拖入音乐 · M 静音</div>
-<div id="mus" data-s="idle" role="group" aria-label="音乐">
+<div id="enter"><span>ENTER</span><small>Headphones recommended</small></div>
+<div id="hint">Move: parallax · Drag: look around · Scroll: zoom · Click: show controls · Click again / Space: switch · Hold: breathe · V: mic · Drop in music · M: mute</div>
+<div id="mus" data-s="idle" role="group" aria-label="Music">
   <div class="cap">
-    <button class="orb" id="musB" type="button" aria-label="载入 / 播放 / 暂停">
+    <button class="orb" id="musB" type="button" aria-label="Load / play / pause">
       <svg class="ring" viewBox="0 0 44 44" aria-hidden="true"><circle class="trk" cx="22" cy="22" r="19.5"/><circle class="prg" id="musP" cx="22" cy="22" r="19.5"/></svg>
       <svg class="ic i-note" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 18V6.2l9-2V16"/><circle cx="7.6" cy="18.2" r="2.4"/><circle cx="16.6" cy="16.2" r="2.4"/></svg>
       <svg class="ic i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.8 6.6v10.8l8.4-5.4z"/></svg>
       <svg class="ic i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="7.6" y="6.4" width="3" height="11.2" rx="1.2"/><rect x="13.4" y="6.4" width="3" height="11.2" rx="1.2"/></svg>
     </button>
     <div class="body" id="musBody"><div class="in">
-      <div class="txt"><div class="ttl" id="musTw"><span class="mq" id="musT">载入音乐</span></div><div class="sub" id="musS">点击选择 · 或拖入文件</div></div>
+      <div class="txt"><div class="ttl" id="musTw"><span class="mq" id="musT">Load music</span></div><div class="sub" id="musS">Choose · or drop a file</div></div>
       <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-      <button class="swap" id="musC" type="button" aria-label="更换音乐" title="更换音乐"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12M15 5l3 3-3 3M18 16H6M9 13l-3 3 3 3"/></svg></button>
+      <button class="swap" id="musC" type="button" aria-label="Change music" title="Change music"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12M15 5l3 3-3 3M18 16H6M9 13l-3 3 3 3"/></svg></button>
     </div></div>
   </div>
   <div class="seek" id="musK"><div class="ln"><div class="fl" id="musFl"></div></div></div>
 </div>
-<button id="micB" type="button" data-s="off" aria-label="麦克风：声音与呼吸感应" title="麦克风 · 声音与呼吸感应（V）"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3.5" width="6" height="10.5" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.8"/><path class="sl" d="M4.5 4.5l15 15"/></svg></button>
+<button id="micB" type="button" data-s="off" aria-label="Microphone: sound and breath sensing" title="Microphone · sound &amp; breath sensing (V)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3.5" width="6" height="10.5" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.8"/><path class="sl" d="M4.5 4.5l15 15"/></svg></button>
+<button id="gyB" type="button" data-s="off" aria-label="Gyroscope: tilt your device to look around" title="Gyroscope · tilt your device to look around (G)"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(-30 12 12)"/><circle cx="12" cy="12" r="2.2"/><path class="sl" d="M4.5 4.5l15 15"/></svg></button>
 <div id="drop" aria-hidden="true"><i class="rg"></i><i class="rg"></i><i class="rg"></i>
   <div class="core"><div class="gl"><svg viewBox="0 0 24 24"><path d="M10 18V6.2l9-2V16"/><circle cx="7.6" cy="18.2" r="2.4"/><circle cx="16.6" cy="16.2" r="2.4"/></svg></div>
-    <b class="tx t-new">松手，载入音乐</b><b class="tx t-rep">松手，更换音乐</b><b class="tx t-pre">先进入，再载入音乐</b>
+    <b class="tx t-new">Release to load music</b><b class="tx t-rep">Release to replace music</b><b class="tx t-pre">Enter first, then load music</b>
     <small>mp3 · m4a · wav · flac</small></div></div>
 <input type="file" id="musF" accept="audio/*,.mp3,.m4a,.wav,.ogg,.flac,.aac" hidden>
 <script>
@@ -182,10 +198,10 @@
   const canvas = document.getElementById('c');
   const COARSE = matchMedia('(pointer:coarse)').matches || matchMedia('(hover:none)').matches;   // 触屏设备：手机 / 平板
   const BT = COARSE ? 3 : 6;                                                                    // 泛光采样数：触屏减半，省电省 GPU
-  if (COARSE) document.getElementById('hint').textContent = '轻点 唤出按钮 · 再点 转换 · 按住 呼吸 · 双指滑动 变换视角 · 点麦克风 用声音呼吸';
+  if (COARSE) document.getElementById('hint').textContent = 'Drag / tilt device: look around · Tap: show controls · Tap again: switch · Hold: breathe · Two-finger swipe: zoom · Tap mic: breathe with your voice';
   document.addEventListener('gesturestart', e => e.preventDefault());                           // 禁止 iOS 双指缩放页面
   const gl = canvas.getContext('webgl', {antialias:false, powerPreference:'high-performance'});
-  if (!gl) { document.body.innerHTML = '<p style="color:#fff;font-family:sans-serif;padding:20px">你的浏览器不支持 WebGL</p>'; return; }
+  if (!gl) { document.body.innerHTML = '<p style="color:#fff;font-family:sans-serif;padding:20px">Your browser does not support WebGL</p>'; return; }
 
   const vsSrc = `attribute vec2 a; void main(){ gl_Position = vec4(a,0.,1.); }`;
 
@@ -208,7 +224,14 @@
   uniform vec4  u_sk[4];   // 萤火: x, y, 锐度, 亮度
   uniform float u_hue;     // 棱镜偏色事件
   uniform vec4  u_em[5];   // 中心扩散: 半径, 光环强度, 后期强度, 中心柔光包络
+  uniform mat3  u_cam;     // 镜头朝向（列向量 = 右 / 上 / 后）
+  uniform float u_foc;     // 焦距：越小视野越广
+  uniform vec3  u_cpos;    // 镜头位置微摆：给星尘层真正的视差
+  uniform float u_zv, u_eth;  // 推进速度（有符号）/ 缩放余韵（0~1）
+  uniform float u_dolly;   // 前后推进：-1 退远 ~ +1 逼近
+  uniform vec2  u_fbShift; // 镜头转动时，上一帧的屏幕位移
   #define TAU 6.28318530718
+  float g_bl;   // 缩放时的失焦量：近处光点虚化得多，远处几乎不虚化
 
   float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
   float noise(vec2 p){
@@ -229,6 +252,70 @@
     return c * ca + cross(k, c) * sa + k * dot(k, c) * (1. - ca);
   }
   mat2 rot(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
+
+  float hash13(vec3 p){ p = fract(p * .1031); p += dot(p, p.zyx + 31.32); return fract((p.x + p.y) * p.z); }
+  float vn3(vec3 p){
+    vec3 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
+    return mix(mix(mix(hash13(i), hash13(i + vec3(1,0,0)), f.x), mix(hash13(i + vec3(0,1,0)), hash13(i + vec3(1,1,0)), f.x), f.y),
+               mix(mix(hash13(i + vec3(0,0,1)), hash13(i + vec3(1,0,1)), f.x), mix(hash13(i + vec3(0,1,1)), hash13(i + vec3(1,1,1)), f.x), f.y), f.z);
+  }
+  // 空间中的雾幕：悬在不同距离的半透明云，镜头一动彼此错位，在你与曼陀罗之间撑出层次
+  float fog(vec3 rd, vec3 c, float R, float K, float t){
+    float b = dot(c, rd);
+    float s = -b + sqrt(max(b * b - dot(c, c) + R * R, 0.));
+    vec3 P = (c + rd * s) * K;
+    float n = vn3(P + vec3(0., t * .05, 0.)) * .65 + vn3(P * 2.1 + 7.3) * .35;
+    return smoothstep(.46, .82, n);
+  }
+  // 世界空间的星尘壳层：固定在空间里（随镜头转动），镜头位置一晃，近层比远层移得多 = 真视差
+  float shell(vec3 rd, vec3 c, float R, float K, float seed, float sharp, float t){
+    float b = dot(c, rd);
+    float s = -b + sqrt(max(b * b - dot(c, c) + R * R, 0.));
+    vec3 g = (c + rd * s) * K;
+    vec3 id = floor(g), fr = fract(g) - .5;
+    float h = hash13(id + seed);
+    vec3 off = (vec3(hash13(id + 3.1 + seed), hash13(id + 7.7 + seed), hash13(id + 11.3 + seed)) - .5) * .30;
+    vec3 dd = fr - off;
+    float tw = .55 + .45 * sin(t * (.6 + h * 1.7) + h * 60.);
+    // 光点只画在自己的格子里，之前近处的大光斑会越出格子边缘，被直直地「切」一刀。
+    // 现在：光点限制在格子中央，并在格边做平滑窗口；离镜头太近时淡出，而不是被拉成巨大的碎片
+    vec3 aw = abs(fr);
+    float win = 1. - smoothstep(.30, .50, max(aw.x, max(aw.y, aw.z)));
+    float nearF = smoothstep(2.8, 4.4, s);   // 离镜头近的光点整体淡出：正视曼陀罗时，面前不再飘着光点
+    // 大小各不相同：绝大多数是极小的星点，偶尔有一两颗明显更大更亮的「亮星」
+    float hs = hash13(id + 9.1), sz = mix(.45, 2.3, hs * hs * hs * hs);
+    float br2 = (.5 + .8 * hash13(id + 5.5)) * (.7 + .5 * sz);
+    float fb = 1. + 2.0 * g_bl * clamp(7. / R, .08, 1.);                    // 景深：越近越虚
+    float d2 = dot(dd, dd) * sharp / (sz * sz * fb * fb);
+    float win2 = 1. - smoothstep(.16, .46, max(aw.x, max(aw.y, aw.z)));
+    float glow = exp(-d2 * .10) * .20 * (.35 + .65 * sz / 2.3) * win2;     // 微微的炫光：柔和的晕，随亮星变大
+    return step(.91, h) * (exp(-d2) * win + glow * (.6 + .4 * fb)) * nearF * tw * br2 / (1. + .55 * (fb - 1.));   // 虚化时光斑变大变柔，总亮度近似守恒
+  }
+
+
+  // 纵深星层（参考 The Art of Code 的分层星空 + Star Nest 的距离衰减）：
+  // 每层在「飞行相位」dep∈[0,1] 里循环——远处(0)：格子细密、星点极小极暗；飞近(1)：格子放大、星点变大变亮，然后淡出，新的一层从远处淡入。
+  // 层与层首尾都淡到 0，所以不会有「闪现」；所有层沿同一个前进轴向外舒展，天然就是穿梭 + 视差。
+  vec3 starLayer(vec2 q, float scale, float seed, float dep, float bl){
+    vec2 g = q * scale, id = floor(g), fr = fract(g) - .5;
+    float h = hash(id + seed);
+    if (h > .17) return vec3(0.);                                       // 稀疏：只有约 17% 的格子有星
+    float mag = pow(hash(id + seed + 7.7), 5.5);                        // 星等：绝大多数极暗极小，极少数明亮
+    vec2 off = (vec2(hash(id + seed + 3.1), hash(id + seed + 11.3)) - .5) * .42;
+    vec2 dd = fr - off;
+    float f = 1. + bl * 2.4 * dep * dep;                                // 景深：越近的星越虚
+    float r0 = (.022 + .042 * mag) * f, d2 = dot(dd, dd);
+    float core = exp(-d2 / (r0 * r0)) / pow(f, 1.5);
+    float halo = exp(-d2 / (r0 * r0 * 16.)) * .09 * (.35 + mag) / pow(f, 1.1);   // 微微的炫光
+    vec2 aw = abs(fr);
+    float win = 1. - smoothstep(.27, .49, max(aw.x, aw.y));
+    float tw = 1. + .10 * sin(u_time * (.25 + h * 3.) + h * 400.);      // 极轻的呼吸式闪烁，不再跳动
+    float fade = smoothstep(0., .22, dep) * smoothstep(1., .76, dep) * (.20 + .80 * dep);   // 远暗近亮 + 首尾淡出
+    float tmp = fract(h * 91.7);
+    vec3 c = mix(vec3(.66, .78, 1.), vec3(1., .84, .66), tmp);          // 星色：偏冷 ↔ 偏暖
+    c = mix(vec3(.52, .66, 1.), c, .40 + .60 * dep);                    // 大气透视：越远越偏冷蓝
+    return c * (core + halo) * win * tw * fade * (.20 + 1.05 * mag);
+  }
 
   vec3 scene(vec2 uv, float sym, float mode, float t, float br, float lift){
     uv *= rot(t * .12);
@@ -284,11 +371,7 @@
     float glint = pow(cont, 64.) * pow(.5 + .5 * sin(f * 53. + t * 2.3), 6.);   // 丝线峰值处细碎闪烁，像金属反光
     col += line * glint * (.35 + .6 * u_voice + .3 * lift);
 
-    // 中心光芯 + 呼吸光晕
-    float core = exp(-rr * 7.) * (.55 + .45 * br + .5 * u_low + .9 * u_voice) * (.85 + .3 * e2);
-    float halo = .014 / (rr * rr + .02) * (.5 + .5 * br);
-    col += mix(vec3(1., .82, .58), vec3(.8, 1., .95), mode) * (core + halo * .6);
-    col += mix(vec3(.9, .5, .22), vec3(.15, .65, .6), mode) * .028 * exp(-rr * 2.6) * (.55 + .45 * br + .7 * u_voice);   // 中心氤氲：有体积的光，而不是一个点
+    // （中心光芯已移到 main 的屏幕空间：缩放时光点大小不变）
 
     // 径向光环（极细）
     float ring = pow(.5 + .5 * cos(rr * 24. - t * 1.5 + f * 3.), 40.) * exp(-rr * 2.2);
@@ -328,16 +411,23 @@
         float cw = cr - ak * P.y * (1. + wob * .22);
         re += exp(-cw * cw * P.z) * exp(-ak * P.w) * pow(.55, float(k)) * smoothstep(0., .45, ak);
       }
-      sp -= dc / sqrt(cr * cr + .003) * re * Q.x;
+      // 防折叠：位移的径向梯度一旦超过 1，空间会「翻折」，同一个中心被映射到多处，画面里就会冒出一个一模一样的小中心。
+      // 细而强的涟漪最容易触发，这里按涟漪宽度限幅，保证映射始终单调
+      float lim = .6 / (sqrt(2. * P.z) * .607 + 1e-3);
+      sp -= dc / sqrt(cr * cr + .003) * re * clamp(Q.x, -lim, lim);
       rl += re * Rr.y;
       rtint += re * Rr.z;
     }
 
     // —— 中心扩散：自画面中心向外的色散光环，同时把流场向外推开 ——
-    vec2 cc = (frag - .5 * u_res) / mn;
+    // 极点（曼陀罗中心 / 漩涡喉口）在屏幕上的位置：随镜头转动而移动；光扩散以它为圆心，而不是固定在屏幕正中
+    vec3 rcp = vec3(-u_cam[0].z, -u_cam[1].z, -u_cam[2].z);
+    float pvis = 1. - smoothstep(-.35, 0., rcp.z);
+    vec2 pp = rcp.xy / min(-rcp.z, -.02) * u_foc;
+    vec2 cc = (frag - .5 * u_res) / mn - pp * pvis;
     float ccr = length(cc);
     vec3 emL = vec3(0.);
-    float emW = 0., emF = 0.;
+    float emW = 0., emF = 0., emE = 0.;
     for (int j = 0; j < 5; j++) {
       vec4 E = u_em[j];
       if (E.y < .003 && E.w < .003) continue;
@@ -349,6 +439,7 @@
       float d1 = ccr - E.x * .955, d2 = ccr - E.x * 1.045;
       emL += vec3(exp(-d1 * d1 * kw), fr, exp(-d2 * d2 * kw)) * E.y;       // 红内蓝外：棱镜色散
       emW += wk * E.y;
+      emE += E.w;
       // 中心柔光：宽高斯，随环外扩缓缓散开、变淡
       float sp2 = 1. + 1.6 * E.x;
       emF += (.7 * exp(-ccr * ccr * 16. / (sp2 * sp2)) + .3 * exp(-ccr * ccr * 4.5 / sp2)) * E.w;
@@ -371,29 +462,18 @@
     float swb = exp(-sdv * sdv * 38.) * u_sw.w;      // 光幕：扫过处丝线被点亮
     float lift = infl * .55 + tr * .9 + swb * 1.2;
 
-    // —— 视差：更慢的弹簧 + 极轻微的倾斜，制造纵深 ——
-    vec2 pm = u_par;
-    vec2 uv = sp - pm * .22;
-    uv *= rot(-pm.x * .05);
-
-    // —— 3D 轴心偏移：真透视。画面是一块悬在空间里的平面，朝指针方向偏转，近侧放大、远侧收缩 ——
-    vec2 tl = clamp(pm, -.75, .75);
-    tl = tl * (1. - .35 * dot(tl, tl));              // 靠近边缘时柔和收敛，不会翻过头
-    float ya = tl.x * .62, pa = tl.y * .62;          // 偏航 / 俯仰（弧度，最大约 ±25°）
-    vec3 ex = vec3(cos(ya), 0., sin(ya));
-    vec3 ey = vec3(0., cos(pa), sin(pa));
-    vec3 pn = cross(ex, ey);
-    const float CD = 2.2;                            // 相机距离：越小透视越强
-    vec3 ro = vec3(0., 0., CD), rd = vec3(uv, -CD);
-    float th = -dot(pn, ro) / dot(pn, rd);
-    vec3 hp = ro + rd * th;
-    uv = vec2(dot(hp, ex), dot(hp, ey));
-    uv += tl * .05 * (1. - exp(-dot(uv, uv) * 2.5)); // 外圈多移一点：中心为轴，边缘漂浮，层次更深
-
-    // —— 滚轮视角：倾斜 + 推拉 + 旋转（周期函数，来回滚动可逆）——
-    uv /= (1. + .26 * sin(u_depth * .31) * uv.y);
-    uv *= exp(.30 * sin(u_depth * .45));
-    uv *= rot(u_depth * .12);
+    // —— 球形空间：镜头在世界中心，曼陀罗铺在整个包围球上（极点在正前方，身后渐隐为深空）——
+    // 屏幕像素 → 视线方向 → 世界方向（随镜头转动）→ 立体投影回图案坐标
+    // —— 漩涡：越靠近喉口，空间被卷得越紧（差速旋转）。丝线弯成螺旋汇入中心，像被引力牵引 ——
+    {
+      vec2 pd0 = sp - pp;
+      float pr0 = length(pd0);
+      float swA = (.42 + .10 * u_breath + .25 * u_voice + .10 * u_low) * pvis * exp(-pr0 * pr0 / .075);
+      sp = pp + rot(swA) * pd0;
+    }
+    vec3 rc0 = normalize(vec3(sp, -u_foc));
+    vec3 rd = u_cam * rc0;
+    vec2 uv = rd.xy / max(1. - rd.z, .06) * 1.4 * exp(-.32 * u_dolly);     // 曼陀罗在正前方的极点；越往身后越稀薄，沉入深空
 
     float t  = u_time * .35;
     float br = u_breath;
@@ -408,7 +488,70 @@
 
     vec3 lc = mix(vec3(1., .75, .45), vec3(.6, 1., .9), u_mode);
 
-    // 指针柔光 + 轨迹光 + 涟漪光
+    // —— 中心「喉口」：全部在屏幕空间里算，滚轮推拉 / 焦距变化时，光点与喉口的大小都不变 ——
+    vec2 pd = sp - pp;
+    float prr = length(pd);
+    float pan = atan(pd.y, pd.x);
+    vec2 pdir = vec2(cos(pan), sin(pan));
+    float tt0 = u_time * .35;
+    // 边缘不规整：两层低频噪声沿角度扰动 + 缓慢漂移，幅度克制，不像齿轮也不张牙舞爪
+    float edgeN = (fbm(pdir * 1.15 + vec2(tt0 * .11, 3.7)) - .5) * .20
+                + (noise(pdir * 2.6 + vec2(9.1, -tt0 * .17)) - .5) * .08;
+    float R0 = .074 * (1. + edgeN * 1.4) * (1. + .05 * (br - .5));
+    float throat = smoothstep(R0 * .30, R0 * 2.15, prr);
+    throat = throat * throat * (3. - 2. * throat);
+
+    vec3 coreC = mix(vec3(1., .82, .58), vec3(.8, 1., .95), u_mode);
+    vec3 coolC = mix(vec3(.55, .70, 1.), vec3(1., .66, .86), u_mode);
+
+    // 喉口里的「另一个世界」：把曼陀罗的另一层反向、慢速、偏冷色地叠在口里，像透过虫洞看见彼岸。
+    // 只在喉口区域内计算；越靠近中心越暗，让光点保持干净
+    vec3 voidC = mix(vec3(.010, .007, .022), vec3(.004, .012, .022), u_mode);
+    vec3 beyond = voidC;
+    if (pvis > .01 && throat < .995) {
+      vec2 uv2 = pdir * (.24 + prr * 2.6);
+      vec3 inr = scene(uv2, 8., u_mode, -tt0 * 1.5 + 7., br, 0.);
+      float il = dot(inr, vec3(.30, .59, .11));
+      vec3 innerC = mix(inr, vec3(il) * mix(vec3(.55, .78, 1.45), vec3(1.4, .8, .95), u_mode), .62) * .50;
+      beyond += innerC * smoothstep(R0 * .12, R0 * .95, prr);
+    }
+    col = mix(beyond, col, mix(1., throat, pvis));
+
+    // 视界环：贴着喉口边缘的一圈细光，内侧偏暖、外侧偏冷（色散），亮度沿圆周不均匀，并有一处缓慢游走的高光
+    float Rr = R0 * 1.38, rngW = R0 * .17;
+    float ringN = .50 + .50 * noise(pdir * 2.2 + vec2(u_time * .07, 1.3));
+    float hot = .38 + .62 * pow(.5 + .5 * cos(pan - u_time * .22 + 1.3 * sin(u_time * .11)), 3.);
+    float ri = exp(-pow((prr - Rr * .965) / rngW, 2.));
+    float ro = exp(-pow((prr - Rr * 1.045) / (rngW * 1.35), 2.));
+    float rGlow = exp(-pow((prr - Rr) / (R0 * .9), 2.));
+    float ringE = (.55 + .45 * br + .5 * u_low + .6 * u_voice) * ringN * hot * pvis;
+    col += ringE * (coreC * ri * .20 + coolC * ro * .13 + coreC * rGlow * .028);
+
+    // 汇入的光丝：对数螺旋，沿旋转方向缓缓流向中心；相位被噪声扰乱，不规则、很淡
+    {
+      float lr = log(prr + .02);
+      float sph = pan * 9. + lr * 4.6 + u_time * .55 + (fbm(pdir * 1.3 + vec2(lr * .5, u_time * .04)) - .5) * 3.2;
+      float stk = pow(.5 + .5 * cos(sph), 7.);
+      float env = smoothstep(R0 * 1.15, R0 * 2.1, prr) * exp(-max(prr - R0 * 2.1, 0.) * 6.);
+      col += mix(coreC, coolC, .35) * stk * env * .085 * (.55 + .45 * br + .4 * u_low + .8 * u_voice) * pvis;
+    }
+
+    // 中心炫光（照搬最新文件）：光芯 + 呼吸光晕 + 氤氲，算在图案坐标里，所以随推拉缩放一起放大 / 缩小、虚化；
+    // 喉口会把中心挖空，所以这里在挖空之后再叠加。点击扩散时流场被推开，炫光随之被拉伸。
+    {
+      float rrG = length(uv) * (1. - (.07 + .05 * u_low + .07 * u_voice) * br);
+      float e2G = .5 + .5 * sin(u_depth * .23 + 2.1);
+      // 平时安静压低，随机事件 / 点击扩散 / 低音 / 人声 / 缩放余韵 / 吸气顶点时才亮起，拉开层次
+      float gk = .10 + .90 * clamp(emE * 1.1 + .5 * u_low + .8 * u_voice + .3 * u_eth + .35 * u_pulse + .2 * smoothstep(.8, 1., br), 0., 1.);
+      float coreG = exp(-rrG * 7.) * (.55 + .45 * br + .5 * u_low + .9 * u_voice) * (.85 + .3 * e2G);
+      float haloG = .014 / (rrG * rrG + .02) * (.5 + .5 * br);
+      col += pvis * (mix(vec3(1., .82, .58), vec3(.8, 1., .95), u_mode) * (coreG + haloG * .6) * gk
+                     + mix(vec3(.9, .5, .22), vec3(.15, .65, .6), u_mode) * .028 * exp(-rrG * 2.6) * (.55 + .45 * br + .7 * u_voice) * (.4 + .6 * gk));
+      float cIs = (.55 + .45 * br + .5 * u_low + .9 * u_voice);
+      col += pvis * vec3(1., .96, .9) * exp(-prr * 38.) * cIs * .55 * (.25 + .75 * gk);     // 中央一点极小的炽白奇点
+    }
+
+    // 指针柔光 + 轨迹光 + 涟漪光 + 光扩散
     float md = length((frag - u_mouse) / mn);
     col += lc * .05 * exp(-md * 5.) * (.6 + .4 * br) * u_presence;
     col += lc * tr * .09;
@@ -420,7 +563,7 @@
       float d2 = dot(dk, dk);
       col += lc * (exp(-d2 * K.z) * 1.1 + exp(-d2 * K.z * .05) * .10) * K.w;
     }
-    col += emL * mix(lc, vec3(1.), .5) * .30 + lc * (emW * .05 + emF * .5);
+    col += emL * mix(lc, vec3(1.), .5) * .30 + lc * (emW * .05 + emF * .5) * pvis;
     col += mix(lc, lc.gbr * .6 + .4, clamp(rtint.x, 0., 1.)) * rl;
 
     // 3D 受光：近指针一侧略亮、远侧略沉，像一面有厚度的玻璃
@@ -432,7 +575,36 @@
     // 暗角
     float r = length((frag - .5 * u_res) / mn);
     float e1m = .5 + .5 * sin(u_depth * .37 + .6);
-    col *= smoothstep(mix(1.1, 1.4, e1m), .15, r);
+    // 球形空间里没有「纸边」：世界暗角按「离正前方极点多远」渐隐，而不是按屏幕半径
+    float rw = 1.4 * sqrt((1. + rd.z) / max(1. - rd.z, 1e-4));      // = 1.4·tan(θ/2)，θ = 离正前方极点的夹角
+    float wv = smoothstep(mix(3.2, 3.7, e1m), .3, rw);
+    col *= wv * sqrt(wv);
+    // 头显式的轻微镜头暗角（固定在屏幕上），让画面中央更聚焦、层次更深
+    col *= mix(.5, 1., smoothstep(1.2, .3, length((frag - .5 * u_res) / mn)));
+
+    // 世界空间纵深：五层星尘（0.9 ~ 16 单位远）+ 两层雾幕。越近的越大越亮、位移越大；越远的越小越暗、几乎不动
+    {
+      vec3 cp = u_cpos; float cl = length(cp); if (cl > .6) cp *= .6 / cl;
+      float tt = t * 3.;
+      g_bl = clamp(abs(u_zv) * 1.1 + u_eth * .9, 0., 1.);
+      // 球面方向 → 以正前方为中心的平面坐标：深度循环就是沿前进轴的放大（星点从中心向外流淌，近快远慢）
+      vec2 q0 = rd.xy / (1.25 - rd.z);
+      float tau = t * .012 + u_dolly * .10;                             // 缓慢的恒定前行 + 滚轮 / 自动推进
+      vec3 sc = vec3(0.);
+      for (int i = 0; i < 6; i++) {
+        float fi = float(i), ph = fi / 6. + tau, cyc = floor(ph), dep = ph - cyc;
+        vec2 qi = q0 - cp.xy * (.030 * dep);                            // 镜头平移时近层移得多：视差
+        sc += starLayer(qi, 36. * exp(-1.79 * dep), cyc * 13.7 + fi * 5.31, dep, g_bl);
+      }
+      float behind = smoothstep(.36, .88, rw) * (1. - .9 * clamp(dot(col, vec3(.299, .587, .114)) * 2.2, 0., 1.));   // 星空在曼陀罗身后，不穿插其中
+      vec3 emTint = max(vec3(1.) + (emL - vec3(dot(emL, vec3(.333)))) * 2.4, vec3(.25));   // 与光环同一套 红内蓝外 的色散
+      col += sc * behind * 1.15 * mix(vec3(1.), lc, .18) * emTint * (1. + dot(emL, vec3(.333)) * 1.4) * (1. + .15 * u_eth);
+      // 空灵：退远时曼陀罗蒙上一层空气（大气透视，显得更远更大）；缩放的余韵里整个空间泛起一层冷白的薄光
+      vec3 air = mix(vec3(.55, .62, .95), vec3(.75, .95, .9), u_mode);
+      float far = clamp(-u_dolly * .55, 0., 1.);
+      col = mix(col, col * .72 + air * .05 * wv, far * .55);
+      col += air * u_eth * .04 * (.3 + .7 * wv);
+    }
 
     // 影调映射 (ACES 近似)
     col *= .9 + .5 * br * .4;
@@ -446,7 +618,7 @@
 
     // 时间虚化：与上一帧按视角运动方向混合
     vec2 pc = (frag - .5 * u_res) / mn;
-    pc = pc * (1. - u_fbZoom) * rot(-u_fbRot);
+    pc = pc * (1. - u_fbZoom) * rot(-u_fbRot) - u_fbShift;
     vec2 puv = pc * mn / u_res + .5;
     col = mix(col, texture2D(u_prev, puv).rgb, u_fb);
 
@@ -473,7 +645,7 @@
   gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
   const U = {};
-  ['u_res','u_time','u_mouse','u_par','u_vel','u_presence','u_press','u_speed','u_trail','u_rc','u_rp','u_rq','u_rr','u_breath','u_mode','u_depth','u_fb','u_fbZoom','u_fbRot','u_prev','u_low','u_mid','u_high','u_voice','u_pulse','u_pAge','u_em','u_rs','u_sw','u_sk','u_hue'].forEach(n => U[n] = gl.getUniformLocation(prog, n));
+  ['u_res','u_time','u_mouse','u_par','u_vel','u_presence','u_press','u_speed','u_trail','u_rc','u_rp','u_rq','u_rr','u_breath','u_mode','u_depth','u_fb','u_fbZoom','u_fbRot','u_prev','u_low','u_mid','u_high','u_voice','u_pulse','u_pAge','u_em','u_rs','u_sw','u_sk','u_hue','u_cam','u_foc','u_cpos','u_fbShift','u_dolly','u_zv','u_eth'].forEach(n => U[n] = gl.getUniformLocation(prog, n));
 
 
   const fsPresent = `
@@ -482,9 +654,28 @@
   uniform sampler2D u_tex; uniform vec2 u_res; uniform float u_time, u_fade, u_base, u_mode, u_glow;
   uniform vec4 u_em[5];
   uniform vec4 u_cb;   // 四角呼吸 (左上, 右上, 右下, 左下)，相位依次错开 1/4 周期
+  uniform vec2 u_pole; // 曼陀罗极点（喉口）在屏幕上的位置，单位同 p
   #define BL4(v) mix(mix(v.w, v.z, uv.x), mix(v.x, v.y, uv.x), uv.y)
   float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
   mat2 rot(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
+  // 微尘：两层缓慢漂移的光点。S>0 时沿屏幕径向拉长（与四周的径向拉伸同向）
+  float dustF(vec2 p, vec2 dir, float S){
+    float dust = 0.;
+    for (int L = 0; L < 2; L++) {
+      float fl = float(L);
+      vec2 gp = p * (34. - 17. * fl) + vec2(fl * 7.3, -u_time * (.06 - .03 * fl));
+      vec2 id = floor(gp), fr = fract(gp) - .5;
+      float h = hash(id + fl * 13.1);
+      vec2 off = (vec2(hash(id + 3.1), hash(id + 7.7)) - .5) * .6;
+      vec2 dd = fr - off;
+      float dpar = dot(dd, dir), dper = dd.x * dir.y - dd.y * dir.x;
+      float tw = .5 + .5 * sin(u_time * (.7 + h * 1.8) + h * 60.);
+      float win = 1. - smoothstep(.32, .5, max(abs(fr.x), abs(fr.y)));
+      float d2 = dpar * dpar / ((1. + S) * (1. + S)) + dper * dper;
+      dust += step(.955, h) * exp(-d2 * (260. - 170. * fl)) * tw * (1. - .4 * fl) * win / (1. + .35 * S);
+    }
+    return dust;
+  }
   void main(){
     vec2 fc = gl_FragCoord.xy;
     vec2 uv = fc / u_res;
@@ -502,12 +693,14 @@
     float A = u_base * gc * w;
     for (int i = 0; i < 5; i++) {
       vec4 E = u_em[i];
-      float band = exp(-(r - E.x) * (r - E.x) * 10.);
+      float rpl = length(p - u_pole);
+      float band = exp(-(rpl - E.x) * (rpl - E.x) * 10.);
       A += E.z * w * (.5 + .5 * gc) + E.y * band * .3;
     }
     A = min(A, 1.4);
 
     vec3 col;
+    vec3 tintMul = vec3(1.); float kS = 0., csS = 0.;
     if (A < .01) {
       col = texture2D(u_tex, uv).rgb;
     } else {
@@ -538,7 +731,8 @@
       vec3 warm = mix(mix(cBL, cBR, uv.x), mix(cTL, cTR, uv.x), uv.y);
       float cA = clamp(A * (.4 + .6 * w), 0., 1.);
       warm = mix(vec3(dot(warm, vec3(.333))), warm, .4);   // 偏色降饱和
-      col *= mix(vec3(1.), warm, cA * .6);
+      tintMul = mix(vec3(1.), warm, cA * .6); kS = k; csS = cs;
+      col *= tintMul;
       col += vec3(.004, .003, .008) * cA;
     }
     // —— 泛光：把亮处的丝线晕成柔和的光（两圈采样，角度带轻微抖动，混入胶片颗粒里不显脏）——
@@ -557,21 +751,19 @@
       }
       col += bl * (u_glow * .65 / ${BT}.) * (1. - smoothstep(.35, .75, lm0));   // 已经很亮的地方不再叠加，避免中心过曝
     }
-    // —— 微尘：两层缓慢漂移、各自闪烁的细小光点，补足画面边缘的纵深 ——
+    // —— 微尘：和画面同一套径向拉伸 / 色散 / 偏色，边缘的光点才会与过渡区对得上 ——
     {
       vec3 dcol = mix(vec3(1., .82, .58), vec3(.7, 1., .92), u_mode);
-      float lm = dot(col, vec3(.299, .587, .114)), dust = 0.;
-      for (int L = 0; L < 2; L++) {
-        float fl = float(L);
-        vec2 gp = p * (34. - 17. * fl) + vec2(fl * 7.3, -u_time * (.06 - .03 * fl));
-        vec2 id = floor(gp), fr = fract(gp) - .5;
-        float h = hash(id + fl * 13.1);
-        vec2 off = (vec2(hash(id + 3.1), hash(id + 7.7)) - .5) * .6;
-        vec2 dd = fr - off;
-        float tw = .5 + .5 * sin(u_time * (.7 + h * 1.8) + h * 60.);
-        dust += step(.955, h) * exp(-dot(dd, dd) * (260. - 170. * fl)) * tw * (1. - .4 * fl);
+      float lm = dot(col, vec3(.299, .587, .114));
+      vec3 dv;
+      if (A < .01) dv = vec3(dustF(p, vec2(1., 0.), 0.));
+      else {
+        vec2 dr0 = p / max(length(p), 1e-4);
+        float S = min(A * (.3 + r) * 5., 3.);
+        float sc0 = 1. - kS * .5;
+        dv = vec3(dustF(p * (sc0 - csS), dr0, S), dustF(p * sc0, dr0, S), dustF(p * (sc0 + csS), dr0, S));
       }
-      col += dcol * dust * (.10 + .10 * u_glow) * (1. - clamp(lm * 1.5, 0., 1.)) * (.4 + .6 * smoothstep(.15, .7, r));
+      col += dcol * dv * tintMul * (.05 + .05 * u_glow) * (1. - clamp(lm * 1.5, 0., 1.)) * (.4 + .6 * smoothstep(.15, .7, r));
     }
     col += (hash(fc + fract(u_time) * 100.) - .5) * .028;
     col = min(col, vec3(.82)) + .18 * (1. - exp(-max(col - .82, 0.) / .18));   // 高光软过渡：亮处不再被硬生生削平成纯白
@@ -582,7 +774,7 @@
   gl.attachShader(progP, vs); gl.attachShader(progP, fsP); gl.bindAttribLocation(progP, 0, 'a'); gl.linkProgram(progP);
   if (!gl.getProgramParameter(progP, gl.LINK_STATUS)) { console.error(gl.getProgramInfoLog(progP)); return; }
   const UP = {};
-  ['u_tex','u_res','u_time','u_fade','u_em','u_base','u_mode','u_cb','u_glow'].forEach(n => UP[n] = gl.getUniformLocation(progP, n));
+  ['u_tex','u_res','u_time','u_fade','u_em','u_base','u_mode','u_cb','u_glow','u_pole'].forEach(n => UP[n] = gl.getUniformLocation(progP, n));
 
   // 乒乓缓冲：上一帧用于时间虚化
   const T = [null, null]; let ti = 0;
@@ -974,7 +1166,7 @@
     if (!AE.on()) {
       setTimeout(() => emit(.9), 220);
       AE.start(); keepAwake();
-      document.getElementById('enter').classList.add('gone'); document.body.classList.remove('pre'); document.getElementById('mus').classList.add('show'); document.getElementById('micB').classList.add('show'); setTimeout(() => poke(7800), 600);
+      document.getElementById('enter').classList.add('gone'); document.body.classList.remove('pre'); document.getElementById('mus').classList.add('show'); document.getElementById('micB').classList.add('show'); document.getElementById('gyB').classList.add('show'); if (COARSE) gyroStart(); setTimeout(() => poke(7800), 600);
       const h = document.getElementById('hint'); h.style.opacity = '.55';
       setTimeout(() => { h.style.opacity = '0'; }, 8000);
       return;
@@ -983,7 +1175,7 @@
     if (chainN === 0) setTimeout(toggle, 260);                             // 一串点击只切换一次模式，不再来回翻转
     else if (now - lastEmitT > 1.8) { emit(.4 + .35 * combo); lastEmitT = now; }   // 其余点击化为越来越亮的柔和光环
   };
-  addEventListener('click', act);
+  addEventListener('click', e => { if (dragSuppress) return; act(e); });
 
   // ============ 滚轮：深度弹簧 → 视角 / 环境 / 时间虚化 ============
   const depth = {x: 0, v: 0};
@@ -1018,6 +1210,147 @@
   });
   document.addEventListener('visibilitychange', () => { document.hidden ? AE.suspend() : AE.resume(); });
 
+
+  // ============ 镜头：站在包围球中央环视（拖动 / 惯性 / 自动漂移 / 陀螺仪） ============
+  const cam = {zv: 0, zvS: 0, pdolly: 0, eth: 0, roll: 0, dolly: 0, yaw: 0, pitch: 0, vy: 0, vp: 0, pendY: 0, pendP: 0, drift: 0, lastIn: -9, foc: .62, pyaw: 0, ppitch: 0, ang: 0};
+  const drg = {down: false, id: -1, sx: 0, sy: 0, lx: 0, ly: 0, lt: 0, active: false};
+  let dragSuppress = false;
+  const cmul = (A, v) => [A[0][0]*v[0] + A[1][0]*v[1] + A[2][0]*v[2], A[0][1]*v[0] + A[1][1]*v[1] + A[2][1]*v[2], A[0][2]*v[0] + A[1][2]*v[1] + A[2][2]*v[2]];
+  const mm3 = (A, B) => [cmul(A, B[0]), cmul(A, B[1]), cmul(A, B[2])];             // 列向量矩阵乘法：A·B
+  const Ry = a => { const c = Math.cos(a), s = Math.sin(a); return [[c, 0, -s], [0, 1, 0], [s, 0, c]]; };
+  const Rx = a => { const c = Math.cos(a), s = Math.sin(a); return [[1, 0, 0], [0, c, s], [0, -s, c]]; };
+  const Rz = a => { const c = Math.cos(a), s = Math.sin(a); return [[c, s, 0], [-s, c, 0], [0, 0, 1]]; };
+  const I3 = () => [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+  const camBuf = new Float32Array(9), cposBuf = new Float32Array(3);
+
+  const dragTarget = e => e.target && e.target.closest && e.target.closest('#mus, #micB, #gyB, #drop');
+  addEventListener('pointerdown', e => {
+    if (dragTarget(e) || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    drg.down = true; drg.id = e.pointerId; drg.sx = drg.lx = e.clientX; drg.sy = drg.ly = e.clientY; drg.lt = e.timeStamp; drg.active = false;
+    cam.vy = cam.vp = 0;
+  });
+  addEventListener('pointermove', e => {
+    if (gesture) {                                                            // 双指推拉期间：只记位置，不转镜头；松开后不会因旧坐标而猛地一跳
+      if (e.pointerId === drg.id) { drg.lx = e.clientX; drg.ly = e.clientY; drg.lt = e.timeStamp; }
+      cam.pendY = cam.pendP = 0; cam.vy = cam.vp = 0; return;
+    }
+    if (!drg.down || e.pointerId !== drg.id) return;
+    if (!drg.active) {
+      if (Math.hypot(e.clientX - drg.sx, e.clientY - drg.sy) < 9) return;     // 小于 9px 仍算点按，不算拖动
+      drg.active = true; clearTimeout(pressTimer); pressT = 0; pDownT = 0; lastHoldMs = 0;
+    }
+    const k = 1 / (cam.foc * Math.min(innerWidth, innerHeight));              // 每像素对应的弧度：手指按住的那一点跟着手指走
+    const ux = (e.clientX - drg.lx) * k, uy = (e.clientY - drg.ly) * k;
+    const cr = Math.cos(cam.roll), sr = Math.sin(cam.roll);
+    const dx = ux * cr + uy * sr, dy = uy * cr - ux * sr;                     // 屏幕方向 → 偏航/俯仰方向：镜头有滚转时，手指往哪滑，画面就往哪走
+    const dt = Math.max(.008, (e.timeStamp - drg.lt) / 1000);
+    cam.pendY += dx; cam.pendP += dy;
+    cam.vy += (Math.max(-6, Math.min(6, dx / dt)) - cam.vy) * .4;
+    cam.vp += (Math.max(-6, Math.min(6, dy / dt)) - cam.vp) * .4;
+    drg.lx = e.clientX; drg.ly = e.clientY; drg.lt = e.timeStamp; cam.lastIn = performance.now() / 1000;
+  });
+  const dragEnd = e => {
+    if (e.pointerId !== drg.id) return;
+    if (drg.active) { dragSuppress = true; setTimeout(() => { dragSuppress = false; }, 80); if (e.timeStamp - drg.lt > 90) cam.vy = cam.vp = 0; }
+    drg.down = false; drg.active = false;
+  };
+  addEventListener('pointerup', dragEnd); addEventListener('pointercancel', dragEnd);
+
+  // 陀螺仪：把设备朝向换算成相对「进入时那一刻」的镜头旋转
+  const gy = {on: false, asked: false, B0: null, tgt: I3(), cur: I3(), ang: -1};
+  function gyroBasis(a, b, g, scr){
+    const d = Math.PI / 180, R = mm3(mm3(Rz(a * d), Rx(b * d)), Ry(g * d)), c = Math.cos(scr * d), s = Math.sin(scr * d);
+    return mm3(R, [[c, -s, 0], [s, c, 0], [0, 0, 1]]);                       // 列：屏幕的 右 / 上 / 后
+  }
+  function onOri(e){
+    if (e.alpha == null || e.beta == null) return;
+    const scr = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+    const B = gyroBasis(e.alpha, e.beta, e.gamma || 0, scr);
+    if (!gy.B0 || gy.ang !== scr) { gy.B0 = B; gy.ang = scr; }
+    gy.tgt = [0, 1, 2].map(j => [0, 1, 2].map(i => gy.B0[i][0]*B[j][0] + gy.B0[i][1]*B[j][1] + gy.B0[i][2]*B[j][2]));   // B0ᵀ·B
+  }
+  function orthoN(M){
+    const n = v => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0]/l, v[1]/l, v[2]/l]; };
+    const c0 = n(M[0]), d = c0[0]*M[1][0] + c0[1]*M[1][1] + c0[2]*M[1][2];
+    const c1 = n([M[1][0] - d*c0[0], M[1][1] - d*c0[1], M[1][2] - d*c0[2]]);
+    return [c0, c1, [c0[1]*c1[2] - c0[2]*c1[1], c0[2]*c1[0] - c0[0]*c1[2], c0[0]*c1[1] - c0[1]*c1[0]]];
+  }
+  const gyB = document.getElementById('gyB');
+  async function gyroStart(){
+    if (!window.DeviceOrientationEvent) return false;
+    if (!gy.asked) {
+      gy.asked = true;
+      try { if (typeof DeviceOrientationEvent.requestPermission === 'function') { const r = await DeviceOrientationEvent.requestPermission(); if (r !== 'granted') return false; } }
+      catch (err) { return false; }
+      addEventListener('deviceorientation', onOri, true);
+    }
+    gy.on = true; gy.B0 = null; gyB.dataset.s = 'on'; return true;
+  }
+  function gyroStop(){ gy.on = false; gyB.dataset.s = 'off'; }
+  // 只有真能拿到陀螺仪数据的设备才显示按钮
+  if (COARSE && window.DeviceOrientationEvent) {
+    const probe = e => { if (e.alpha != null) { document.body.classList.add('gyro-ok'); removeEventListener('deviceorientation', probe); } };
+    addEventListener('deviceorientation', probe);
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') document.body.classList.add('gyro-ok');   // iOS 要先授权才有数据
+  }
+  ['pointerdown', 'click'].forEach(ev => gyB.addEventListener(ev, e => e.stopPropagation()));
+  gyB.addEventListener('click', async e => {
+    e.currentTarget.blur();
+    if (gy.on) { gyroStop(); hb_toast('Gyroscope off · drag the screen to look around'); return; }
+    if (await gyroStart()) hb_toast('Gyroscope on · tilt your device to look around', 3600); else hb_toast('Gyroscope permission not granted');
+  });
+  addEventListener('keydown', e => { if (e.code === 'KeyG' && gy.on) gyroStop(); });
+
+  // 每帧：合成镜头
+  function camStep(dt, now, W, H, mn, breath){
+    const t = now;
+    // 用户输入：落手即接管；松手后带惯性滑行
+    cam.yaw += cam.pendY; cam.pitch += cam.pendP; cam.pendY = cam.pendP = 0;
+    if (!drg.active) {
+      cam.yaw += cam.vy * dt; cam.pitch += cam.vp * dt;
+      const dk = Math.exp(-dt * 1.7); cam.vy *= dk; cam.vp *= dk;
+    }
+    const busy = drg.active || Math.hypot(cam.vy, cam.vp) > .05 || t - cam.lastIn < 1.2;
+    cam.drift += ((busy ? 0 : 1) - cam.drift) * (1 - Math.exp(-dt * (busy ? 5 : .45)));
+    // 自动漂移：几条慢周期叠加的角速度（积分后是有界的缓慢摇摆，不会越飘越远），停在你放手的地方继续漂
+    const w1 = .045, w2 = .11, w3 = .06, w4 = .17;
+    cam.yaw   += (.95 * w1 * Math.cos(w1 * t) + .30 * w2 * Math.cos(w2 * t + 2.)) * dt * cam.drift * 2.2;
+    cam.pitch += (.32 * w3 * Math.cos(w3 * t + .7) + .10 * w4 * Math.cos(w4 * t)) * dt * cam.drift * 2.2 - cam.pitch * .06 * dt * cam.drift;
+    cam.pitch = Math.max(-1.35, Math.min(1.35, cam.pitch));
+    if (cam.yaw > 6.2832 || cam.yaw < -6.2832) cam.yaw %= 6.2832;
+    // 鼠标：头部随指针微微转向并平移（触屏不用，免得与拖动冲突）
+    const fx = COARSE ? 0 : (px.x - W * .5) / mn, fy = COARSE ? 0 : (py.x - H * .5) / mn;
+    const yawV = cam.yaw - fx * .30, pitchV = cam.pitch + fy * .22;
+    const rollV = .09 * Math.sin(t * .05 + 1.3) - cam.vy * .015;   // 慢滚转 + 滚轮旋转 + 甩动时轻微倾侧
+    cam.roll = rollV;
+    // 视场：滚轮推拉 + 呼吸开合 + 转得快时轻微拉伸
+    const angSp = Math.min(Math.hypot(yawV - cam.pyaw, pitchV - cam.ppitch) / Math.max(dt, 1e-3), 4);
+    cam.ang += (angSp - cam.ang) * (1 - Math.exp(-dt * 6));
+    cam.foc = .62 * Math.exp(-.30 * Math.sin(depth.x * .45)) * (1 - .06 * (breath - .5)) * (1 - .035 * Math.min(cam.ang / 2, 1));
+    // 滚轮的「俯仰」也并入镜头
+    const pitchW = 0;   // 缩放不再带动俯仰
+    // 陀螺仪平滑
+    const gt = gy.on ? gy.tgt : I3(), gk = 1 - Math.exp(-dt * (gy.on ? 14 : 3));
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) gy.cur[j][i] += (gt[j][i] - gy.cur[j][i]) * gk;
+    gy.cur = orthoN(gy.cur);
+    const M = mm3(mm3(mm3(Ry(yawV), Rx(pitchV + pitchW)), Rz(rollV)), gy.cur);
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) camBuf[j * 3 + i] = M[j][i];
+    // 镜头位置：呼吸般微晃 + 鼠标平移 → 近层、远层星尘错位移动
+    // 前后推进：慢速自动往返（约 90 秒一程）+ 滚轮；镜头真的在空间里前后移动，近层星尘与雾幕随之掠过
+    cam.dolly = .55 * Math.sin(t * .07) + .3 * Math.sin(t * .031 + 1.) - .9 * Math.sin(depth.x * .45) + .12 * (breath - .5);
+    const dv = (cam.dolly - cam.pdolly) / Math.max(dt, 1e-3); cam.pdolly = cam.dolly;   // 推进速度 → 光痕
+    cam.zvS += (Math.max(-3, Math.min(3, dv)) - cam.zvS) * (1 - Math.exp(-dt * 5));
+    cam.zv = Math.max(-1, Math.min(1, cam.zvS * 1.6));
+    cam.eth += (wheelSpeed - cam.eth) * (1 - Math.exp(-dt * (wheelSpeed > cam.eth ? 1.4 : .35)));   // 缩放停下后，空灵感缓缓退去
+    cposBuf[0] = .22 * Math.sin(t * .13) + fx * .26;
+    cposBuf[1] = .16 * Math.cos(t * .17) - fy * .20;
+    cposBuf[2] = -.5 * cam.dolly;
+    const mx = cam.foc * (yawV - cam.pyaw), my = -cam.foc * (pitchV - cam.ppitch), cr2 = Math.cos(rollV), sr2 = Math.sin(rollV);
+    const shx = mx * cr2 + my * sr2, shy = -mx * sr2 + my * cr2;
+    cam.pyaw = yawV; cam.ppitch = pitchV;
+    return {shx, shy, fb: Math.min(.30, .30 * Math.pow(Math.min(cam.ang / 1.4, 1), 2))};
+  }
+
   // ============ 载入音乐 · 胶囊 UI：折叠成一枚光环，悬停 / 点按时舒展 ============
   const byId = id => document.getElementById(id);
   const musUI = byId('mus'), orb = byId('musB'), swapB = byId('musC'), musF = byId('musF'), seekEl = byId('musK'), seekFl = byId('musFl');
@@ -1051,27 +1384,27 @@
   function refreshSub(){
     if (override && performance.now() > override.until) override = null;
     if (override) setSub(override.k, override.x);
-    else if (!musUI.classList.contains('has')) setSub('hint', '点击选择 · 或拖入文件');
+    else if (!musUI.classList.contains('has')) setSub('hint', 'Choose · or drop a file');
     else setSub('time', fmt(el.currentTime) + ' / ' + fmt(el.duration));
   }
   const say = (k, x, ms) => { override = {k, x, until: performance.now() + ms}; };
   const setState = s => { if (musUI.dataset.s !== s) musUI.dataset.s = s; };
   function poke(ms){ uiShow((ms || 5200) + 800); musUI.classList.add('open'); clearTimeout(openT); openT = setTimeout(() => musUI.classList.remove('open'), ms || 5200); }
 
-  AE.hooks.fade = () => say('fade', '原声渐隐', 8500);
-  AE.hooks.back = () => { say('end', '原声归来', 5000); poke(5200); };
+  AE.hooks.fade = () => say('fade', 'Original sound fading', 8500);
+  AE.hooks.back = () => { say('end', 'Original sound returns', 5000); poke(5200); };
 
   function loadMusic(file){
     if (!file) return;
     if (!AE.on()) {
-      const h = byId('hint'); h.textContent = '先点击进入，再载入音乐'; h.style.opacity = '.7'; setTimeout(() => { h.style.opacity = '0'; }, 4000); return;
+      const h = byId('hint'); h.textContent = 'Enter first, then load music'; h.style.opacity = '.7'; setTimeout(() => { h.style.opacity = '0'; }, 4000); return;
     }
     const had = musUI.classList.contains('has'), prev = trackName;
     trackName = file.name.replace(/\.[^.]+$/, '');
-    setState('busy'); setTitle(trackName); say('load', '正在载入', 20000); poke(30000);
+    setState('busy'); setTitle(trackName); say('load', 'Loading', 20000); poke(30000);
     AE.music(file).then(a => {
       if (!a) {
-        trackName = prev; setTitle(prev || '载入音乐'); say('err', '无法播放此文件', 3400);
+        trackName = prev; setTitle(prev || 'Load music'); say('err', 'This file can\u2019t be played', 3400);
         setState(had ? 'pause' : 'idle'); musUI.classList.add('shake'); setTimeout(() => musUI.classList.remove('shake'), 650); poke(3800); return;
       }
       el = a; override = null; musUI.classList.add('has'); document.body.classList.add('hasm');
@@ -1097,7 +1430,7 @@
   [musUI, musF].forEach(n => ['pointerdown', 'click'].forEach(ev => n.addEventListener(ev, e => e.stopPropagation())));
   musUI.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') { musUI.classList.add('open'); clearTimeout(openT); } });
   musUI.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') poke(1600); });
-  [musUI, byId('micB')].forEach(n => {
+  [musUI, byId('micB'), byId('gyB')].forEach(n => {
     n.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') { uiHover = true; uiShow(); } });
     n.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') { uiHover = false; uiShow(1800); } });
   });
@@ -1234,7 +1567,7 @@
       inhale = hb_fMode === 1 ? hold : !hb_snd;
       const fast = hb_fMode === 2, vm = fast ? (inhale ? 2.2 : 1.8) : (inhale ? 1 : .8), tgt = hb_near(breathPhase, inhale ? hb_PK : hb_TR);
       want = Math.max(-vm, Math.min(vm, (tgt - breathPhase) * (fast ? 1.8 : .75)));
-      if (!hb_told[hb_fMode]) { hb_told[hb_fMode] = 1; hb_toast(hb_fMode === 1 ? '跟随你的呼吸 · 按住吸气，松开呼气' : '跟随你的声音 · 出声呼气，安静吸气', 3800); }
+      if (!hb_told[hb_fMode]) { hb_told[hb_fMode] = 1; hb_toast(hb_fMode === 1 ? 'Following your breath · hold to inhale, release to exhale' : 'Following your voice · sound to exhale, silence to inhale', 3800); }
       if (hb_wasInhale && !inhale && hb_bf(breathPhase) > .7 && now - hb_lastExT > 1200) { hb_lastExT = now; emit(.35 + .45 * hb_bf(breathPhase)); }   // 从吸满转为呼出：荡开一圈
     }
     hb_wasInhale = hb_fMode ? inhale : false;
@@ -1248,14 +1581,14 @@
 
   async function hb_toggleMic(){
     uiShow(3200);
-    if (!AE.on()) { hb_toast('先点击进入，再开启麦克风'); return; }
+    if (!AE.on()) { hb_toast('Enter first, then turn on the microphone'); return; }
     const r = await AE.micToggle();
-    if (r === 'on') hb_toast('麦克风已开启 · 先安静一秒校准 · 建议佩戴耳机', 5200);
-    else if (r === 'off') hb_toast('麦克风已关闭');
-    else if (r === 'denied') hb_toast('没有获得麦克风权限');
-    else if (r === 'unsupported' || r === 'noctx') hb_toast('此环境无法使用麦克风（需要 https 或本地打开）', 4800);
+    if (r === 'on') hb_toast('Microphone on · stay quiet for a second to calibrate · headphones recommended', 5200);
+    else if (r === 'off') hb_toast('Microphone off');
+    else if (r === 'denied') hb_toast('Microphone permission not granted');
+    else if (r === 'unsupported' || r === 'noctx') hb_toast('Microphone unavailable here (needs https or a local file)', 4800);
   }
-  AE.hooks.micEnd = () => hb_toast('麦克风已断开');
+  AE.hooks.micEnd = () => hb_toast('Microphone disconnected');
   ['pointerdown', 'click'].forEach(ev => micB.addEventListener(ev, e => e.stopPropagation()));
   micB.addEventListener('click', e => { e.currentTarget.blur(); hb_toggleMic(); });
   addEventListener('keydown', e => {
@@ -1315,10 +1648,10 @@
     wheelSpeed += (wsGoal - wheelSpeed) * (1 - Math.exp(-dt * (wsGoal > wheelSpeed ? 6 : 2.2)));
     const ls = .30 * Math.sin(depth.x * .45);
     const zf = Math.max(-.03, Math.min(.03, (ls - lastLs) * 2.2));
-    const rf = Math.max(-.03, Math.min(.03, (depth.x - lastDepth) * .12 * 1.5));
+    const rf = Math.max(-.03, Math.min(.03, (depth.x - lastDepth) * 0));   // 缩放不再带动画面旋转
     lastLs = ls; lastDepth = depth.x;
     fbZoom += (zf - fbZoom) * .5; fbRot += (rf - fbRot) * .5;
-    const fbAmt = .66 * wheelSpeed * wheelSpeed * (3 - 2 * wheelSpeed);
+    const fbAmt0 = .30 * wheelSpeed * wheelSpeed * (3 - 2 * wheelSpeed);
 
     voiceV = AE.on() ? AE.micVoice() : 0;
     time += tdt * slowV * (1 + .7 * env.mid + .6 * speedF + .75 * wheelSpeed + 1.6 * voiceV);
@@ -1366,6 +1699,10 @@
     const cbf = ph => .5 + .5 * (Math.sin(ph) + .18 * Math.sin(2 * ph + 1.2)) / 1.18;
     for (let i = 0; i < 4; i++) cb[i] = cbf(breathPhase - i * Math.PI / 2);
     const postBase = .24 + .24 * wheelSpeed;
+    const cs = camStep(dt, real, W, H, mn, breath);
+    const fbAmt = Math.max(fbAmt0, cs.fb);
+    const rcz = -camBuf[8], pvJ = (() => { const x = Math.max(0, Math.min(1, (rcz + .35) / .35)); return 1 - x * x * (3 - 2 * x); })();
+    const poleX = -camBuf[2] * pvJ * cam.foc / Math.min(-rcz, -.02), poleY = -camBuf[5] * pvJ * cam.foc / Math.min(-rcz, -.02);
 
     gl.uniform2f(U.u_res, W, H);
     gl.uniform1f(U.u_time, time);
@@ -1382,9 +1719,10 @@
     gl.uniform1f(U.u_voice, voiceV); gl.uniform1f(U.u_low, env.low); gl.uniform1f(U.u_mid, env.mid); gl.uniform1f(U.u_high, env.high);
     gl.uniform1f(U.u_pulse, pulse); gl.uniform1f(U.u_pAge, pAge);
     gl.uniform1f(U.u_depth, depth.x);
-    gl.uniform1f(U.u_fb, Math.max(fbAmt, .5 * stallK));
+    gl.uniform1f(U.u_fb, Math.max(fbAmt, .5 * stallK, .10 * Math.min(1, Math.abs(cam.zv) * 1.2)));
     gl.uniform1f(U.u_fbZoom, fbZoom + .006 * stallK);
     gl.uniform1f(U.u_fbRot, fbRot);
+    gl.uniformMatrix3fv(U.u_cam, false, camBuf); gl.uniform1f(U.u_foc, cam.foc); gl.uniform3fv(U.u_cpos, cposBuf); gl.uniform1f(U.u_dolly, cam.dolly); gl.uniform1f(U.u_zv, cam.zv); gl.uniform1f(U.u_eth, cam.eth); gl.uniform2f(U.u_fbShift, cs.shx, cs.shy);
     gl.uniform4fv(U.u_em, emBuf); gl.uniform1f(U.u_rs, RS);
     gl.uniform4fv(U.u_sw, swBuf); gl.uniform4fv(U.u_sk, skBuf); gl.uniform1f(U.u_hue, hueV);
 
@@ -1404,6 +1742,7 @@
     gl.uniform1f(UP.u_time, time);
     gl.uniform1f(UP.u_glow, Math.min(1.6, .38 + .22 * breath + .9 * voiceV + .25 * env.low));
     gl.uniform1f(UP.u_fade, fade * fade * (3 - 2 * fade));
+    gl.uniform2f(UP.u_pole, poleX, poleY);
     gl.uniform4fv(UP.u_em, emBuf); gl.uniform1f(UP.u_base, postBase); gl.uniform1f(UP.u_mode, modeV); gl.uniform4fv(UP.u_cb, cb);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.useProgram(prog);
