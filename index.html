@@ -231,6 +231,7 @@
   uniform float u_depth, u_fb, u_fbZoom, u_fbRot;
   uniform sampler2D u_prev;
   uniform float u_low, u_mid, u_high, u_pulse, u_pAge, u_voice;
+  uniform vec3  u_cg;   // 中心炫光专用的缓动驱动：x 总驱动, y 低音, z 人声（JS 端做过二阶缓动，起得慢落得更慢）
   uniform vec2  u_mouse, u_par, u_vel;
   uniform float u_presence, u_press, u_speed;
   uniform vec2  u_rc[6];   // 涟漪中心
@@ -561,16 +562,17 @@
     // 中心炫光（照搬最新文件）：光芯 + 呼吸光晕 + 氤氲，算在图案坐标里，所以随推拉缩放一起放大 / 缩小、虚化；
     // 喉口会把中心挖空，所以这里在挖空之后再叠加。点击扩散时流场被推开，炫光随之被拉伸。
     {
-      float rrG = length(uv) * (1. - (.07 + .05 * u_low + .07 * u_voice) * br);
+      float rrG = length(uv) * (1. - (.07 + .05 * u_cg.y + .07 * u_cg.z) * br);
       float e2G = .5 + .5 * sin(u_depth * .23 + 2.1);
       // 平时安静压低，随机事件 / 点击扩散 / 低音 / 人声 / 缩放余韵 / 吸气顶点时才亮起，拉开层次
-      float gk = .10 + .90 * clamp(emE * 1.1 + .5 * u_low + .8 * u_voice + .3 * u_eth + .35 * u_pulse + .2 * smoothstep(.8, 1., br), 0., 1.);
-      float coreG = exp(-rrG * 7.) * (.55 + .45 * br + .5 * u_low + .9 * u_voice) * (.85 + .3 * e2G);
+      float gk = .10 + .90 * clamp(u_cg.x + .2 * smoothstep(.8, 1., br), 0., 1.);   // 总驱动已在 JS 端缓动，亮起时是缓缓升起而不是一下闪亮
+      const float GDIM = .78;   // 中心炫光整体亮度下调
+      float coreG = exp(-rrG * 7.) * (.55 + .45 * br + .5 * u_cg.y + .9 * u_cg.z) * (.85 + .3 * e2G);
       float haloG = .014 / (rrG * rrG + .02) * (.5 + .5 * br);
-      col += pvis * (mix(vec3(1., .82, .58), vec3(.8, 1., .95), u_mode) * (coreG + haloG * .6) * gk
-                     + mix(vec3(.9, .5, .22), vec3(.15, .65, .6), u_mode) * .028 * exp(-rrG * 2.6) * (.55 + .45 * br + .7 * u_voice) * (.4 + .6 * gk));
-      float cIs = (.55 + .45 * br + .5 * u_low + .9 * u_voice);
-      col += pvis * vec3(1., .96, .9) * exp(-prr * 38.) * cIs * .55 * (.25 + .75 * gk);     // 中央一点极小的炽白奇点
+      col += pvis * GDIM * (mix(vec3(1., .82, .58), vec3(.8, 1., .95), u_mode) * (coreG + haloG * .6) * gk
+                     + mix(vec3(.9, .5, .22), vec3(.15, .65, .6), u_mode) * .028 * exp(-rrG * 2.6) * (.55 + .45 * br + .7 * u_cg.z) * (.4 + .6 * gk));
+      float cIs = (.55 + .45 * br + .5 * u_cg.y + .9 * u_cg.z);
+      col += pvis * GDIM * vec3(1., .96, .9) * exp(-prr * 38.) * cIs * .55 * (.25 + .75 * gk);     // 中央一点极小的炽白奇点
     }
 
     // 指针柔光 + 轨迹光 + 涟漪光 + 光扩散
@@ -667,7 +669,7 @@
   gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
   const U = {};
-  ['u_res','u_time','u_mouse','u_par','u_vel','u_presence','u_press','u_speed','u_trail','u_rc','u_rp','u_rq','u_rr','u_breath','u_mode','u_depth','u_fb','u_fbZoom','u_fbRot','u_prev','u_low','u_mid','u_high','u_voice','u_pulse','u_pAge','u_em','u_rs','u_sw','u_sk','u_hue','u_cam','u_foc','u_cpos','u_fbShift','u_dolly','u_zv','u_eth','u_emC'].forEach(n => U[n] = gl.getUniformLocation(prog, n));
+  ['u_res','u_time','u_mouse','u_par','u_vel','u_presence','u_press','u_speed','u_trail','u_rc','u_rp','u_rq','u_rr','u_breath','u_mode','u_depth','u_fb','u_fbZoom','u_fbRot','u_prev','u_low','u_mid','u_high','u_voice','u_pulse','u_pAge','u_em','u_rs','u_sw','u_sk','u_hue','u_cam','u_foc','u_cpos','u_fbShift','u_dolly','u_zv','u_eth','u_emC','u_cg'].forEach(n => U[n] = gl.getUniformLocation(prog, n));
 
 
   const fsPresent = `
@@ -1496,6 +1498,7 @@
   const SKN = 4, skBuf = new Float32Array(SKN * 4), skL = [];
   for (let i = 0; i < SKN; i++) skL.push({a: 0, life: 0, x: 0, y: 0, vx: 0, vy: 0, k: 3000, f: 1});
   const swS = {t: 0, dur: 0, dx: 1, dy: 0}, swBuf = new Float32Array(4);
+  let cgS = [0,0,0,0,0,0];   // 中心炫光缓动状态：总驱动/低音/人声，各两级
   let voiceV = 0, hueV = 0, hueT = 0, hueHold = 0, slowV = 1, slowT = 1, slowHold = 0, stallK = 0, evClock = rnd(10, 16), lastEv = -1;
   const EV = [
     {w: 3, f(){                                     // 雨滴：画面别处无声地落下 1–3 圈涟漪
@@ -1720,7 +1723,7 @@
       emBuf[i*4]   = emSpd[i] * (a - TAU_R * (1 - Math.exp(-a / TAU_R)));        // 光环半径：由内慢慢起步，再匀速外扩
       emBuf[i*4+1] = st * ss(a / 1.1) * Math.exp(-a * .5);                        // 光环亮度：柔和渐入、缓缓淡出
       emBuf[i*4+2] = st * Math.pow(Math.sin(Math.PI * Math.min(a / 7.5, 1)), 1.6); // 四角模糊/色差
-      emBuf[i*4+3] = st * ss(a / 1.5) * Math.exp(-a * .62);                       // 中心柔光包络
+      emBuf[i*4+3] = st * ss(a / 2.2) * Math.exp(-a * .55);                       // 中心柔光包络
     }
     const cbf = ph => .5 + .5 * (Math.sin(ph) + .18 * Math.sin(2 * ph + 1.2)) / 1.18;
     for (let i = 0; i < 4; i++) cb[i] = cbf(breathPhase - i * Math.PI / 2);
@@ -1743,6 +1746,17 @@
     gl.uniform3fv(U.u_trail, trailBuf);
     gl.uniform1f(U.u_breath, breath);
     gl.uniform1f(U.u_mode, modeV);
+    // 中心炫光的驱动：两级缓动，起得慢（单级约 0.75s，叠加后呈 S 形缓缓升起）、落得更慢，不再随音频瞬时跳亮
+    let emSum = 0; for (let i = 0; i < EMN; i++) emSum += emBuf[i*4+3];
+    const cgRaw = Math.min(1, emSum * 1.1 + .5 * env.low + .8 * voiceV + .3 * cam.eth + .35 * pulse);
+    const cgEase = (k, tgt, up, dn) => {
+      const a = k, b = k + 1;
+      cgS[a] += (tgt - cgS[a]) * (1 - Math.exp(-dt / (tgt > cgS[a] ? up : dn)));
+      cgS[b] += (cgS[a] - cgS[b]) * (1 - Math.exp(-dt / (cgS[a] > cgS[b] ? up : dn)));
+      return cgS[b];
+    };
+    const cgD = cgEase(0, cgRaw, .75, 1.6), cgL = cgEase(2, env.low, .45, 1.0), cgV = cgEase(4, voiceV, .45, 1.1);
+    gl.uniform3f(U.u_cg, cgD, cgL, cgV);
     gl.uniform1f(U.u_voice, voiceV); gl.uniform1f(U.u_low, env.low); gl.uniform1f(U.u_mid, env.mid); gl.uniform1f(U.u_high, env.high);
     gl.uniform1f(U.u_pulse, pulse); gl.uniform1f(U.u_pAge, pAge);
     gl.uniform1f(U.u_depth, depth.x);
@@ -1767,7 +1781,7 @@
     gl.uniform1i(UP.u_tex, 0);
     gl.uniform2f(UP.u_res, W, H);
     gl.uniform1f(UP.u_time, time);
-    gl.uniform1f(UP.u_glow, Math.min(1.6, .38 + .22 * breath + .9 * voiceV + .25 * env.low));
+    gl.uniform1f(UP.u_glow, Math.min(1.6, .38 + .22 * breath + .9 * cgV + .25 * cgL));
     gl.uniform1f(UP.u_fade, fade * fade * (3 - 2 * fade));
     gl.uniform3fv(UP.u_emC, emC);
     gl.uniform4fv(UP.u_em, emBuf); gl.uniform1f(UP.u_base, postBase); gl.uniform1f(UP.u_mode, modeV); gl.uniform4fv(UP.u_cb, cb);
