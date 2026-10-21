@@ -7,7 +7,19 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Breathing Cosmos · Generative Mandala</title>
+<title>Breathing Cosmos · Generative Mandala — Jin Hangtao</title>
+<meta name="description" content="Breathing Cosmos is an interactive generative mandala driven by your breath, voice and music. A real-time WebGL shader artwork by Jin Hangtao.">
+<meta name="keywords" content="generative art,Breathwheel, interactive art, generative mandala, breathing visualization, audio reactive visuals, music visualizer, WebGL shader art, immersive web art, new media art, meditation visual, Jin Hangtao, 生成艺术, 互动艺术, 曼陀罗, 呼吸, 声音可视化, 新媒体艺术, 冥想">
+<meta name="author" content="Jin Hangtao">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Breathing Cosmos">
+<meta property="og:title" content="Breathing Cosmos · Jin Hangtao">
+<meta property="og:description" content="Breathing Cosmos is an interactive generative mandala driven by your breath, voice and music. A real-time WebGL shader artwork by Jin Hangtao.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Breathing Cosmos · Jin Hangtao">
+<meta name="twitter:description" content="Breathing Cosmos is an interactive generative mandala driven by your breath, voice and music. A real-time WebGL shader artwork by Jin Hangtao.">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "CreativeWork", "name": "Breathing Cosmos", "alternateName": "Generative Mandala", "description": "Breathing Cosmos is an interactive generative mandala driven by your breath, voice and music. A real-time WebGL shader artwork by Jin Hangtao.", "author": {"@type": "Person", "name": "Jin Hangtao"}, "creator": {"@type": "Person", "name": "Jin Hangtao"}, "genre": ["Generative art", "Interactive art", "New media art"], "keywords": "generative art, interactive art, generative mandala, breathing visualization, audio reactive visuals, music visualizer, WebGL shader art, immersive web art, new media art, meditation visual, Jin Hangtao, 生成艺术, 互动艺术, 曼陀罗, 呼吸, 声音可视化, 新媒体艺术, 冥想", "inLanguage": "en", "isAccessibleForFree": true}</script>
 <style>
   html, body { margin:0; height:100%; overflow:hidden; background:#000; touch-action:none; overscroll-behavior:none; -webkit-touch-callout:none; -webkit-text-size-adjust:100%; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
   canvas { display:block; position:fixed; left:0; top:0; width:100%; height:100vh; height:100dvh; opacity:0; transition:opacity 3s ease; }
@@ -164,9 +176,16 @@
     #hint { font-size:13px; }
   }
   @media (prefers-reduced-motion:reduce) { #mus *, #mus, #drop, #drop * { animation-duration:.01ms !important; transition-duration:.01ms !important; transition-delay:0s !important; } }
+
+  .seo-text{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0;pointer-events:none}
 </style>
 </head>
 <body class="pre">
+<main class="seo-text">
+<h1>Breathing Cosmos · Generative Mandala</h1>
+<p>An interactive generative mandala by Jin Hangtao. Hold to breathe, speak or play music, and the light, ripples and sound of the cosmos respond in real time. Best experienced with headphones. 由呼吸、声音与音乐驱动的生成式曼陀罗互动艺术作品。</p>
+</main>
+<noscript><p>Breathing Cosmos is an interactive WebGL artwork by Jin Hangtao. Please enable JavaScript to experience it. 请开启 JavaScript 以体验这件互动艺术作品。</p></noscript>
 <canvas id="c"></canvas>
 <div id="enter"><span>ENTER</span><small>Headphones recommended</small></div>
 <div id="hint">Move: parallax · Drag: look around · Scroll: zoom · Click: show controls · Click again / Space: switch · Hold: breathe · V: mic · Drop in music · M: mute</div>
