@@ -7,19 +7,26 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Breathing Cosmos · Generative Mandala — Jin Hangtao</title>
-<meta name="description" content="Breathing Cosmos is an interactive generative mandala driven by your breath, voice and music. A real-time WebGL shader artwork by Jin Hangtao.">
-<meta name="keywords" content="generative art,Breathwheel, interactive art, generative mandala, breathing visualization, audio reactive visuals, music visualizer, WebGL shader art, immersive web art, new media art, meditation visual, Jin Hangtao, 生成艺术, 互动艺术, 曼陀罗, 呼吸, 声音可视化, 新媒体艺术, 冥想">
+<title>Breathwheel · Meditative Listening Space — Jin Hangtao</title>
+<meta name="description" content="Breathwheel is a meditative listening space — an interactive generative mandala that breathes with you. Follow your breath, play your own music, and let light and ripples respond in real time. Your voice stays on your device.">
+<meta name="keywords" content="Breathwheel, meditation, meditative listening space, music listening, breathing visualization, generative mandala, generative art, interactive art, audio reactive visuals, music visualizer, WebGL shader art, immersive web art, new media art, Jin Hangtao, 冥想, 试听空间, 呼吸, 曼陀罗, 生成艺术, 互动艺术, 声音可视化, 新媒体艺术">
 <meta name="author" content="Jin Hangtao">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Breathing Cosmos">
-<meta property="og:title" content="Breathing Cosmos · Jin Hangtao">
-<meta property="og:description" content="Breathing Cosmos is an interactive generative mandala driven by your breath, voice and music. A real-time WebGL shader artwork by Jin Hangtao.">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Breathing Cosmos · Jin Hangtao">
-<meta name="twitter:description" content="Breathing Cosmos is an interactive generative mandala driven by your breath, voice and music. A real-time WebGL shader artwork by Jin Hangtao.">
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "CreativeWork", "name": "Breathing Cosmos", "alternateName": "Generative Mandala", "description": "Breathing Cosmos is an interactive generative mandala driven by your breath, voice and music. A real-time WebGL shader artwork by Jin Hangtao.", "author": {"@type": "Person", "name": "Jin Hangtao"}, "creator": {"@type": "Person", "name": "Jin Hangtao"}, "genre": ["Generative art", "Interactive art", "New media art"], "keywords": "generative art, interactive art, generative mandala, breathing visualization, audio reactive visuals, music visualizer, WebGL shader art, immersive web art, new media art, meditation visual, Jin Hangtao, 生成艺术, 互动艺术, 曼陀罗, 呼吸, 声音可视化, 新媒体艺术, 冥想", "inLanguage": "en", "isAccessibleForFree": true}</script>
+<meta property="og:site_name" content="Breathwheel">
+<meta property="og:title" content="Breathwheel · Meditative Listening Space">
+<meta property="og:description" content="Breathwheel is a meditative listening space — an interactive generative mandala that breathes with you. Follow your breath, play your own music, and let light and ripples respond in real time. Your voice stays on your device.">
+<meta property="og:image" content="https://YOUR-DOMAIN/og-image.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Breathwheel — a glowing generative mandala on black, with the tagline: a meditative listening space">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Breathwheel · Meditative Listening Space">
+<meta name="twitter:description" content="Breathwheel is a meditative listening space — an interactive generative mandala that breathes with you. Follow your breath, play your own music, and let light and ripples respond in real time. Your voice stays on your device.">
+<meta name="twitter:image" content="https://YOUR-DOMAIN/og-image.png">
+<meta name="twitter:image:alt" content="Breathwheel — a glowing generative mandala on black, with the tagline: a meditative listening space">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "CreativeWork", "name": "Breathwheel", "alternateName": "Meditative Listening Space", "description": "Breathwheel is a meditative listening space — an interactive generative mandala that breathes with you. Follow your breath, play your own music, and let light and ripples respond in real time. Your voice stays on your device.", "author": {"@type": "Person", "name": "Jin Hangtao"}, "creator": {"@type": "Person", "name": "Jin Hangtao"}, "genre": ["Meditation", "Generative art", "Interactive art", "New media art"], "keywords": "Breathwheel, meditation, meditative listening space, music listening, breathing visualization, generative mandala, generative art, interactive art, WebGL shader art, Jin Hangtao, 冥想, 试听空间, 呼吸, 曼陀罗, 生成艺术, 互动艺术, 新媒体艺术", "inLanguage": "en", "isAccessibleForFree": true, "image": "https://YOUR-DOMAIN/og-image.png"}</script>
 <style>
   html, body { margin:0; height:100%; overflow:hidden; background:#000; touch-action:none; overscroll-behavior:none; -webkit-touch-callout:none; -webkit-text-size-adjust:100%; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
   canvas { display:block; position:fixed; left:0; top:0; width:100%; height:100vh; height:100dvh; opacity:0; transition:opacity 3s ease; }
@@ -29,6 +36,8 @@
     cursor:pointer; transition:opacity 2.5s ease, visibility 2.5s; text-shadow:0 0 18px rgba(0,0,0,.9); }
   #enter span { animation:br 4.5s ease-in-out infinite; }
   #enter small { font-size:11px; letter-spacing:.18em; opacity:.5; }
+  #enter .nm { font-weight:300; font-size:13px; letter-spacing:.5em; text-indent:.5em; opacity:.9; }
+  #enter .tg { font-style:normal; font-size:11px; letter-spacing:.3em; text-indent:.3em; opacity:.5; margin-top:-8px; margin-bottom:14px; }
   #enter.gone { opacity:0; visibility:hidden; pointer-events:none; }
   @keyframes br { 0%,100% { opacity:.4; } 50% { opacity:1; } }
   #hint {
@@ -124,6 +133,10 @@
     -webkit-backdrop-filter:blur(18px) saturate(1.5); backdrop-filter:blur(18px) saturate(1.5);
     box-shadow:inset 0 0 0 1px rgba(var(--ac),.15), inset 0 1px 0 rgba(255,255,255,.07), 0 10px 36px rgba(0,0,0,.38), 0 0 calc(8px + 34px*var(--ml)) rgba(var(--ac),calc(.35*var(--ml)));
     visibility:hidden; opacity:0; transform:scale(.9); transition:opacity .5s, transform .5s var(--spring), color .5s, visibility 0s .5s; }
+  #micN { position:fixed; right:calc(16px + env(safe-area-inset-right,0px)); bottom:calc(68px + env(safe-area-inset-bottom,0px)); z-index:5; max-width:calc(100vw - 32px);
+    text-align:right; font:300 11px/1.7 system-ui,-apple-system,"PingFang SC",sans-serif; letter-spacing:.08em; color:rgba(var(--ac),.62); text-shadow:0 0 14px rgba(0,0,0,.9);
+    pointer-events:none; opacity:0; transform:translateY(4px); transition:opacity .6s var(--ease), transform .6s var(--ease); }
+  body.ui #micB.show:hover ~ #micN, body.ui #micB.show:focus-visible ~ #micN, body.ui #micB.show[data-s=on] ~ #micN, body.ui #micB.show[data-s=cal] ~ #micN { opacity:1; transform:none; }
   #gyB { position:fixed; right:calc(70px + env(safe-area-inset-right,0px)); bottom:calc(16px + env(safe-area-inset-bottom,0px)); z-index:5; width:44px; height:44px; border-radius:50%; padding:0; margin:0; border:0; cursor:pointer; outline:none; -webkit-tap-highlight-color:transparent;
     color:rgba(var(--ac),.5); background:linear-gradient(135deg,rgba(var(--ac),.10),rgba(var(--ac),.02) 60%),rgba(12,9,7,.34);
     -webkit-backdrop-filter:blur(18px) saturate(1.5); backdrop-filter:blur(18px) saturate(1.5);
@@ -182,12 +195,12 @@
 </head>
 <body class="pre">
 <main class="seo-text">
-<h1>Breathing Cosmos · Generative Mandala</h1>
-<p>An interactive generative mandala by Jin Hangtao. Hold to breathe, speak or play music, and the light, ripples and sound of the cosmos respond in real time. Best experienced with headphones. 由呼吸、声音与音乐驱动的生成式曼陀罗互动艺术作品。</p>
+<h1>Breathwheel · Meditative Listening Space</h1>
+<p>Breathwheel is a meditative listening space by Jin Hangtao: an interactive generative mandala that breathes with you. Hold to breathe, speak or play your own music, and the light and ripples respond in real time. Best experienced with headphones. Your voice stays on your device and is never uploaded or recorded to the cloud. 一个用于冥想与试听的空间：由呼吸、声音与音乐驱动的生成式曼陀罗。声音仅在本地处理，不上传、不记录至云端。</p>
 </main>
-<noscript><p>Breathing Cosmos is an interactive WebGL artwork by Jin Hangtao. Please enable JavaScript to experience it. 请开启 JavaScript 以体验这件互动艺术作品。</p></noscript>
+<noscript><p>Breathwheel is an interactive WebGL meditative listening space by Jin Hangtao. Please enable JavaScript to experience it. 请开启 JavaScript 以体验这个冥想试听空间。</p></noscript>
 <canvas id="c"></canvas>
-<div id="enter"><span>ENTER</span><small>Headphones recommended</small></div>
+<div id="enter"><b class="nm">BREATHWHEEL</b><em class="tg">A meditative listening space</em><span>ENTER</span><small>Headphones recommended</small></div>
 <div id="hint">Move: parallax · Drag: look around · Scroll: zoom · Click: show controls · Click again / Space: switch · Hold: breathe · V: mic · Drop in music · M: mute</div>
 <div id="mus" data-s="idle" role="group" aria-label="Music">
   <div class="cap">
@@ -205,7 +218,8 @@
   </div>
   <div class="seek" id="musK"><div class="ln"><div class="fl" id="musFl"></div></div></div>
 </div>
-<button id="micB" type="button" data-s="off" aria-label="Microphone: sound and breath sensing" title="Microphone · sound &amp; breath sensing (V)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3.5" width="6" height="10.5" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.8"/><path class="sl" d="M4.5 4.5l15 15"/></svg></button>
+<button id="micB" type="button" data-s="off" aria-label="Microphone: sound and breath sensing. Your voice stays on this device and is never uploaded or recorded to the cloud." title="Microphone · sound &amp; breath sensing (V) — Your voice stays on this device, never uploaded or recorded to the cloud"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3.5" width="6" height="10.5" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.8"/><path class="sl" d="M4.5 4.5l15 15"/></svg></button>
+<div id="micN" aria-hidden="true">Your voice stays on this device<br>Never uploaded · never recorded to the cloud</div>
 <button id="gyB" type="button" data-s="off" aria-label="Gyroscope: tilt your device to look around" title="Gyroscope · tilt your device to look around (G)"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(-30 12 12)"/><circle cx="12" cy="12" r="2.2"/><path class="sl" d="M4.5 4.5l15 15"/></svg></button>
 <div id="drop" aria-hidden="true"><i class="rg"></i><i class="rg"></i><i class="rg"></i>
   <div class="core"><div class="gl"><svg viewBox="0 0 24 24"><path d="M10 18V6.2l9-2V16"/><circle cx="7.6" cy="18.2" r="2.4"/><circle cx="16.6" cy="16.2" r="2.4"/></svg></div>
@@ -1582,7 +1596,7 @@
     uiShow(3200);
     if (!AE.on()) { hb_toast('Enter first, then turn on the microphone'); return; }
     const r = await AE.micToggle();
-    if (r === 'on') hb_toast('Microphone on · stay quiet for a second to calibrate · headphones recommended', 5200);
+    if (r === 'on') hb_toast('Microphone on · your voice stays on this device, never uploaded or recorded to the cloud · stay quiet a second to calibrate', 6200);
     else if (r === 'off') hb_toast('Microphone off');
     else if (r === 'denied') hb_toast('Microphone permission not granted');
     else if (r === 'unsupported' || r === 'noctx') hb_toast('Microphone unavailable here (needs https or a local file)', 4800);
