@@ -196,6 +196,9 @@
   @media (prefers-reduced-motion:reduce) { #mus *, #mus, #drop, #drop * { animation-duration:.01ms !important; transition-duration:.01ms !important; transition-delay:0s !important; } }
 
   .seo-text{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0;pointer-events:none}
+  #lay { position:fixed; left:50%; top:calc(18px + env(safe-area-inset-top,0px)); transform:translateX(-50%); z-index:4; pointer-events:none; opacity:0; transition:opacity 1.6s ease;
+    color:rgba(255,236,205,.62); font:300 11px/1 system-ui, -apple-system, "PingFang SC", sans-serif; letter-spacing:.5em; text-indent:.5em; white-space:nowrap; text-shadow:0 0 14px rgba(0,0,0,.9); }
+  #lay.on { opacity:.85; transition-duration:.9s; }
 </style>
 </head>
 <body class="pre">
@@ -205,8 +208,9 @@
 </main>
 <noscript><p>Breathwheel is an interactive WebGL meditative listening space by Jin Hangtao. Please enable JavaScript to experience it. 请开启 JavaScript 以体验这个冥想试听空间。</p></noscript>
 <canvas id="c"></canvas>
+<div id="lay" aria-hidden="true"></div>
 <div id="enter"><b class="nm">BREATHWHEEL</b><em class="tg">A meditative listening space</em><span>ENTER</span><small>Headphones recommended</small></div>
-<div id="hint">Move: parallax · Drag: look around · Scroll: zoom · Click: show controls · Click again / Space: switch · Hold: breathe · V: mic · Drop in music · M: mute</div>
+<div id="hint">Move: parallax · Drag: look around · Scroll: fly through · Click: show controls · Click again / Space: switch · Hold: breathe · V: mic · Drop in music · M: mute · F: dive</div>
 <div id="mus" data-s="idle" role="group" aria-label="Music">
   <div class="cap">
     <button class="orb" id="musB" type="button" aria-label="Load / play / pause">
@@ -235,8 +239,8 @@
 (function(){
   const canvas = document.getElementById('c');
   const COARSE = matchMedia('(pointer:coarse)').matches || matchMedia('(hover:none)').matches;   // 触屏设备：手机 / 平板
-  const BT = COARSE ? 3 : 6;                                                                    // 泛光采样数：触屏减半，省电省 GPU
-  if (COARSE) document.getElementById('hint').textContent = 'Drag / tilt device: look around · Tap: show controls · Tap again: switch · Hold: breathe · Two-finger swipe: zoom · Tap mic: breathe with your voice';
+  const BT = COARSE ? 3 : 6, ZN = COARSE ? 7 : 11;   // ZN：穿越径向光痕采样数                                                                    // 泛光采样数：触屏减半，省电省 GPU
+  if (COARSE) document.getElementById('hint').textContent = 'Drag / tilt device: look around · Tap: show controls · Tap again: switch · Hold: breathe · Two-finger swipe: fly through · Tap mic: breathe with your voice';
   document.addEventListener('gesturestart', e => e.preventDefault());                           // 禁止 iOS 双指缩放页面
   const gl = canvas.getContext('webgl', {antialias:false, powerPreference:'high-performance'});
   if (!gl) { document.body.innerHTML = '<p style="color:#fff;font-family:sans-serif;padding:20px">Your browser does not support WebGL</p>'; return; }
@@ -268,6 +272,8 @@
   uniform float u_foc;     // 焦距：越小视野越广
   uniform vec3  u_cpos;    // 镜头位置微摆：给星尘层真正的视差
   uniform float u_zv, u_eth;  // 推进速度（有符号）/ 缩放余韵（0~1）
+  uniform float u_tunF, u_tunI, u_tunP, u_tunE;   // 无限穿越：层内进度 0~1 / 当前层序号 / 累计进度
+  uniform vec2  u_rk;     // 穿越：x 归一化飞行速度(-1~1，减少动态效果时已缩小) / y 层间冲击 0~1
   uniform float u_dolly;   // 前后推进：-1 退远 ~ +1 逼近
   uniform vec2  u_fbShift; // 镜头转动时，上一帧的屏幕位移
   #define TAU 6.28318530718
@@ -336,7 +342,7 @@
   // 纵深星层（参考 The Art of Code 的分层星空 + Star Nest 的距离衰减）：
   // 每层在「飞行相位」dep∈[0,1] 里循环——远处(0)：格子细密、星点极小极暗；飞近(1)：格子放大、星点变大变亮，然后淡出，新的一层从远处淡入。
   // 层与层首尾都淡到 0，所以不会有「闪现」；所有层沿同一个前进轴向外舒展，天然就是穿梭 + 视差。
-  vec3 starLayer(vec2 q, float scale, float seed, float dep, float bl){
+  vec3 starLayer(vec2 q, float scale, float seed, float dep, float bl, vec2 sd, float S){
     vec2 g = q * scale, id = floor(g), fr = fract(g) - .5;
     float h = hash(id + seed);
     if (h > .17) return vec3(0.);                                       // 稀疏：只有约 17% 的格子有星
@@ -344,7 +350,9 @@
     vec2 off = (vec2(hash(id + seed + 3.1), hash(id + seed + 11.3)) - .5) * .42;
     vec2 dd = fr - off;
     float f = 1. + bl * 2.4 * dep * dep;                                // 景深：越近的星越虚
-    float r0 = (.022 + .042 * mag) * f, d2 = dot(dd, dd);
+    float r0 = (.022 + .042 * mag) * f;
+    float dpar = dot(dd, sd), dper = dd.x * sd.y - dd.y * sd.x;          // 飞行时：星点沿径向拉成光痕（折越快越长）
+    float d2 = dpar * dpar / ((1. + S) * (1. + S)) + dper * dper;
     float core = exp(-d2 / (r0 * r0)) / pow(f, 1.5);
     float halo = exp(-d2 / (r0 * r0 * 16.)) * .09 * (.35 + mag) / pow(f, 1.1);   // 微微的炫光
     vec2 aw = abs(fr);
@@ -354,21 +362,23 @@
     float tmp = fract(h * 91.7);
     vec3 c = mix(vec3(.66, .78, 1.), vec3(1., .84, .66), tmp);          // 星色：偏冷 ↔ 偏暖
     c = mix(vec3(.52, .66, 1.), c, .40 + .60 * dep);                    // 大气透视：越远越偏冷蓝
-    return c * (core + halo) * win * tw * fade * (.20 + 1.05 * mag);
+    return c * (core + halo) * win * tw * fade * (.20 + 1.05 * mag) / (1. + .35 * S);
   }
 
-  vec3 scene(vec2 uv, float sym, float mode, float t, float br, float lift){
+  vec3 scene(vec2 uv, float sym, float mode, float t, float br, float lift, float lay, float zs){
+    mode = mix(mode, 1. - mode, .5 * abs(sin(lay * 1.37)));   // 每一层的色性略有不同：暖金 ↔ 青玉 / 玫瑰，第 0 层保持原样
     uv *= rot(t * .12);
     // 环境：由滚轮深度驱动的连续、可逆的参数漂移
     float e1 = .5 + .5 * sin(u_depth * .37 + .6);
     float e2 = .5 + .5 * sin(u_depth * .23 + 2.1);
-    float fs = mix(1.7, 2.4, e1);      // 流场尺度
+    float fs = mix(1.7, 2.4, e1) * (1. + .12 * sin(lay * 2.3));   // 每一层的流场尺度略不同      // 流场尺度
     float wr = mix(2.6, 4.0, e2);      // 扭曲强度
-    float fq = mix(38., 56., e1);      // 丝线密度
+    float fq = mix(38., 56., e1) * (1. + .10 * sin(lay * 1.7 + 1.));   // 每一层的丝线密度略不同      // 丝线密度
     float r = length(uv);
     float a = atan(uv.y, uv.x);
-    float seg = TAU / sym;
-    a += (fbm(uv * 1.4 + t * .15) - .5) * .55 * (.35 + .65 * smoothstep(.1, .6, r));  // 打破机械对称：每一瓣都略有不同
+    float seg = TAU / (sym + 2. * mod(lay, 3.));   // 每一层的瓣数 +0 / +2 / +4
+    vec2 lo = vec2(lay * 4.13, -lay * 2.71);       // 每一层的噪声种子
+    a += (fbm(uv * 1.4 + t * .15 + lo) - .5) * .55 * (.35 + .65 * smoothstep(.1, .6, r));  // 打破机械对称：每一瓣都略有不同
     a = abs(mod(a, seg) - seg * .5);
 
     // 呼吸：整体半径缓慢膨胀，保持连续
@@ -378,16 +388,19 @@
     vec2 p = vec2(cos(a), sin(a)) * rr;
 
     // 流动场 (domain warp)
-    vec2 q = vec2(fbm(p * fs + vec2(0., t * .35)),
-                  fbm(p * fs + vec2(5.2, 1.3) - t * .30));
+    vec2 q = vec2(fbm(p * fs + vec2(0., t * .35) + lo),
+                  fbm(p * fs + vec2(5.2, 1.3) - t * .30 + lo));
     vec2 w = vec2(fbm(p * fs + wr * q + vec2(1.7, 9.2) + t * .22),
                   fbm(p * fs + wr * q + vec2(8.3, 2.8) - t * .20));
     float f = fbm(p * (fs + .2) + (wr + .2 + 1.2 * u_mid + 1.8 * u_voice) * w) + wave * .05;
 
     // 等高线丝线：细腻金属质感
     float cont = .5 + .5 * cos(f * fq - t * 1.2 - rr * 6.);
-    float fine = pow(cont, 18.) * (1. + 1.4 * u_high + 1.6 * lift + 1.4 * u_voice);
-    float soft = pow(cont, 5.) * .18 * (1. + .8 * lift);
+    // 刚诞生的新层尺度很小、丝线极密：先让细丝线退成柔光，随它长大再慢慢变锐（不闪烁、不起摩尔纹，眼睛也更轻松）
+    float lod = 1. - .65 * smoothstep(1., 2.8, zs);
+    lod *= 1. - .28 * abs(u_rk.x);   // 飞行时丝线略软化成柔光，降低高速下的闪烁
+    float fine = pow(cont, 18.) * (1. + 1.4 * u_high + 1.6 * lift + 1.4 * u_voice) * lod;
+    float soft = pow(cont, 5.) * .18 * (1. + .8 * lift) * (1. + .9 * (1. - lod));
 
     // 暗部体积
     float body = smoothstep(.15, .85, f);
@@ -400,7 +413,7 @@
     vec3 lineA = vec3(1.0, .74, .38);
     vec3 lineB = vec3(.70, 1.0, .93);
     vec3 line  = mix(lineA, lineB, mode);
-    line *= .72 + .38 * (.5 + .5 * cos(vec3(0., 2.1, 4.2) + f * 7. + t * .6));   // 珠母贝般的虹彩流转
+    line *= .72 + .38 * (.5 + .5 * cos(vec3(0., 2.1, 4.2) + f * 7. + t * .6 + lay * 1.1));   // 珠母贝般的虹彩流转
     vec3 tintA = vec3(.35, .22, .85);
     vec3 tintB = vec3(1.0, .55, .70);
     vec3 tint  = mix(tintA, tintB, mode);
@@ -409,7 +422,7 @@
     col += tint * soft * body;
     col += line * fine * (.25 + .85 * body) * (.55 + .45 * br);
     float glint = pow(cont, 64.) * pow(.5 + .5 * sin(f * 53. + t * 2.3), 6.);   // 丝线峰值处细碎闪烁，像金属反光
-    col += line * glint * (.35 + .6 * u_voice + .3 * lift);
+    col += line * glint * (.35 + .6 * u_voice + .3 * lift) * lod * lod;
 
     // （中心光芯已移到 main 的屏幕空间：缩放时光点大小不变）
 
@@ -419,6 +432,14 @@
     col += line * wave * .45;
 
     return col;
+  }
+
+  // 按 mode 混合 8 瓣 / 12 瓣两套，带层序号
+  vec3 sceneM(vec2 uv, float t, float br, float lift, float lay, float zs){
+    if (u_mode < .001) return scene(uv, 8., 0., t, br, lift, lay, zs);
+    if (u_mode > .999) return scene(uv, 12., 1., t, br, lift, lay, zs);
+    float k = smoothstep(0., 1., u_mode);
+    return mix(scene(uv, 8., k, t, br, lift, lay, zs), scene(uv, 12., k, t, br, lift, lay, zs), k);
   }
 
   void main(){
@@ -520,15 +541,43 @@
     float t  = u_time * .35;
     float br = u_breath;
 
+    // —— 无限穿越（Droste 式）：当前层 A 朝中心放大并淡出，下一层 B 从中心以小尺度诞生、向外扩张成正常大小。
+    // B 在 tF=1 时与下一轮的 A 在 tF=0 时完全相同，所以首尾无缝；反向滚动则原路退回。
+    // 越靠外缘位移越快（空间被拉成喉道），纵深感更强；波前边缘很宽很软，没有硬切边
+    const float TL = .9555;                                   // ln 2.6：每穿过一层放大 2.6 倍
+    float ruc = min(length(uv), 1.5);
+    float tF = u_tunF;
+    float tx = -1.;
     vec3 col;
-    if (u_mode < .001)      col = scene(uv, 8.,  0., t, br, lift);
-    else if (u_mode > .999) col = scene(uv, 12., 1., t, br, lift);
-    else {
-      float k = smoothstep(0., 1., u_mode);
-      col = mix(scene(uv, 8., k, t, br, lift), scene(uv, 12., k, t, br, lift), k);
+    if (tF < .0005) {
+      col = sceneM(uv, t, br, lift, u_tunI, 1.);              // 静止时只算一层，没有额外开销
+    } else {
+      float wk = 1. + .25 * ruc;
+      float twA = .5 * u_tunE;                                // 螺旋扭转角（减少动态效果时只剩约 1/3）
+      float kB = TL * (1. - tF) * wk;
+      tx = tF * 2.4 - ruc;                                    // 从中心向外推进的「新世界」波前
+      float wB = smoothstep(0., .75, tx);
+      col = vec3(0.);
+      if (wB < .999) col += (1. - wB) * sceneM(uv * exp(-TL * tF * wk) * rot(twA * tF * (.4 + .6 * ruc)), t, br, lift, u_tunI, 1.);
+      if (wB > .001) col += wB * sceneM(uv * exp(kB) * rot(-twA * (1. - tF) * (.4 + .6 * ruc)), t, br, lift, mod(u_tunI + 1., 64.), exp(kB));
     }
 
     vec3 lc = mix(vec3(1., .75, .45), vec3(.6, 1., .9), u_mode);
+
+    // 穿越的两个瞬间：中心诞生新世界的柔光 + 向外扩散的光环波前。
+    // 为了保护眼睛：峰值亮度压得很低、包络很宽（约半秒以上才起落），不带纯白闪光；系统开启「减少动态效果」时再降到约三成
+    if (tF > .0005) {
+      float birth = smoothstep(0., .16, tF) * (1. - smoothstep(.22, .62, tF));
+      float uR = (tx - .35) / .22;
+      float ringM = smoothstep(0., .12, tF) * (1. - smoothstep(.8, 1., tF)) * (1. - smoothstep(1.15, 1.5, length(uv)));
+      vec3 add = lc * birth * (exp(-ruc * ruc * 14.) * .22 + exp(-ruc * ruc * 2.5) * .055);
+      // 波前：一道细而锐的单色主光边 + 一圈宽淡的柔晕，再留一缕极淡的冷色边；不做彩虹色散，保持金 / 玉的单色调
+      float ek = .6 + .4 * br;
+      add += mix(lc, vec3(1.), .22) * exp(-uR * uR * 5.) * ringM * .095 * ek;
+      add += mix(lc, vec3(1.), .18) * exp(-uR * uR * .5) * ringM * .05 * ek;
+      add += mix(lc, vec3(.58, .78, 1.), .42) * exp(-((uR - .72) / 1.45) * ((uR - .72) / 1.45)) * ringM * .03;
+      col += add * u_tunE;
+    }
 
     // —— 中心「喉口」：全部在屏幕空间里算，滚轮推拉 / 焦距变化时，光点与喉口的大小都不变 ——
     vec2 pd = sp - pp;
@@ -601,17 +650,20 @@
       float tt = t * 3.;
       g_bl = clamp(abs(u_zv) * 1.1 + u_eth * .9, 0., 1.);
       // 球面方向 → 以正前方为中心的平面坐标：深度循环就是沿前进轴的放大（星点从中心向外流淌，近快远慢）
-      vec2 q0 = rd.xy / (1.25 - rd.z);
-      float tau = t * .012 + u_dolly * .10;                             // 缓慢的恒定前行 + 滚轮 / 自动推进
+      float kRot = .38 * u_tunE;   // 斗转星移：星空随穿越缓缓旋转（与层间扭转同向），平时也有极慢的天球转动
+      vec2 q0 = rd.xy / (1.25 - rd.z) * rot(kRot * u_tunP + t * .03);
+      float tau = t * .012 + u_dolly * .10 + u_tunP * .45;   // 穿越时星尘持续向后流淌                             // 缓慢的恒定前行 + 滚轮 / 自动推进
       vec3 sc = vec3(0.);
+      float flyK = abs(u_rk.x), stS = 2.4 * pow(flyK, 1.3);
       for (int i = 0; i < 6; i++) {
         float fi = float(i), ph = fi / 6. + tau, cyc = floor(ph), dep = ph - cyc;
         vec2 qi = q0 - cp.xy * (.030 * dep);                            // 镜头平移时近层移得多：视差
-        sc += starLayer(qi, 36. * exp(-1.79 * dep), cyc * 13.7 + fi * 5.31, dep, g_bl);
+        vec2 r0d = normalize(qi + vec2(1e-4));
+        sc += starLayer(qi, 36. * exp(-1.79 * dep), cyc * 13.7 + fi * 5.31, dep, g_bl, normalize(r0d + (kRot / .8) * vec2(r0d.y, -r0d.x)), stS);   // 光痕沿「径向 + 顺时针切向」，呈螺旋
       }
       float behind = smoothstep(.36, .88, rw) * (1. - .9 * clamp(dot(col, vec3(.299, .587, .114)) * 2.2, 0., 1.));   // 星空在曼陀罗身后，不穿插其中
       vec3 emTint = max(vec3(1.) + (emL - vec3(dot(emL, vec3(.333)))) * 2.4, vec3(.25));   // 与光环同一套 红内蓝外 的色散
-      col += sc * behind * 1.15 * mix(vec3(1.), lc, .18) * emTint * (1. + dot(emL, vec3(.333)) * 1.4) * (1. + .15 * u_eth);
+      col += sc * behind * 1.15 * (1. + .5 * flyK) * mix(vec3(1.), lc, .18 + .40 * flyK) * emTint * (1. + dot(emL, vec3(.333)) * 1.4) * (1. + .15 * u_eth);
       // 空灵：退远时曼陀罗蒙上一层空气（大气透视，显得更远更大）；缩放的余韵里整个空间泛起一层冷白的薄光
       vec3 air = mix(vec3(.55, .62, .95), vec3(.75, .95, .9), u_mode);
       float far = clamp(-u_dolly * .55, 0., 1.);
@@ -620,6 +672,14 @@
     }
 
     // 影调映射 (ACES 近似)
+    // 速度隧道视野：飞得越快，画面越向单色鎏金 / 青玉收拢、四周越沉、整体曝光越低（护眼）；极点处只留一点很柔的「前方的光」
+    {
+      float fk = abs(u_rk.x), rs0 = length((frag - .5 * u_res) / mn);
+      float lmF = dot(col, vec3(.299, .587, .114));
+      col = mix(col, vec3(lmF) * mix(vec3(1.), lc, .55), .38 * fk);              // 向单色收拢，去掉杂色
+      col *= (1. - .30 * fk * smoothstep(.10, .80, rs0)) * (1. - .10 * fk);      // 四周压暗 + 整体略降曝光
+      col += lc * (exp(-prr * prr * 10.) * .03 + exp(-prr * prr * 90.) * .045) * fk * u_tunE;
+    }
     col *= .9 + .5 * br * .4;
     col = (col * (2.51 * col + .03)) / (col * (2.43 * col + .59) + .14);
     col = pow(clamp(col, 0., 1.), vec3(.4545));
@@ -658,7 +718,7 @@
   gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
   const U = {};
-  ['u_res','u_time','u_mouse','u_par','u_vel','u_presence','u_press','u_speed','u_trail','u_rc','u_rp','u_rq','u_rr','u_breath','u_mode','u_depth','u_fb','u_fbZoom','u_fbRot','u_prev','u_low','u_mid','u_high','u_voice','u_pulse','u_pAge','u_em','u_rs','u_sw','u_sk','u_hue','u_cam','u_foc','u_cpos','u_fbShift','u_dolly','u_zv','u_eth','u_emC','u_cg'].forEach(n => U[n] = gl.getUniformLocation(prog, n));
+  ['u_res','u_time','u_mouse','u_par','u_vel','u_presence','u_press','u_speed','u_trail','u_rc','u_rp','u_rq','u_rr','u_breath','u_mode','u_depth','u_fb','u_fbZoom','u_fbRot','u_prev','u_low','u_mid','u_high','u_voice','u_pulse','u_pAge','u_em','u_rs','u_sw','u_sk','u_hue','u_cam','u_foc','u_cpos','u_fbShift','u_dolly','u_zv','u_eth','u_emC','u_cg','u_tunF','u_tunI','u_tunP','u_tunE','u_rk'].forEach(n => U[n] = gl.getUniformLocation(prog, n));
 
 
   const fsPresent = `
@@ -668,6 +728,7 @@
   uniform vec4 u_em[5];
   uniform vec4 u_cb;   // 四角呼吸 (左上, 右上, 右下, 左下)，相位依次错开 1/4 周期
   uniform vec3 u_emC[5]; // 每圈光环锁定的中心（单位同 p）
+  uniform vec2 u_pole; uniform float u_zb;   // 穿越：极点屏幕位置 / 径向运动模糊强度（有符号：>0 飞入）
   #define BL4(v) mix(mix(v.w, v.z, uv.x), mix(v.x, v.y, uv.x), uv.y)
   float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
   mat2 rot(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
@@ -762,7 +823,7 @@
         bl += s1 * smoothstep(.62, 1.0, dot(s1, vec3(.299, .587, .114))) * .55
             + s2 * smoothstep(.55, 1.0, dot(s2, vec3(.299, .587, .114))) * .40;
       }
-      col += bl * (u_glow * .65 / ${BT}.) * (1. - smoothstep(.35, .75, lm0));   // 已经很亮的地方不再叠加，避免中心过曝
+      col += bl * (u_glow * .48 / ${BT}.) * (1. - smoothstep(.35, .75, lm0));   // 已经很亮的地方不再叠加，避免中心过曝
     }
     // —— 微尘：和画面同一套径向拉伸 / 色散 / 偏色，边缘的光点才会与过渡区对得上 ——
     {
@@ -778,7 +839,23 @@
       }
       col += dcol * dv * tintMul * (.05 + .05 * u_glow) * (1. - clamp(lm * 1.5, 0., 1.)) * (.4 + .6 * smoothstep(.15, .7, r));
     }
-    col += (hash(fc + fract(u_time) * 100.) - .5) * .028;
+    // —— 穿越的径向运动模糊：沿「指向极点」的方向抖动采样，配合胶片颗粒读起来是连续的光痕，而不是一格一格的跳变 ——
+    if (abs(u_zb) > .002) {
+      vec2 pu = .5 + u_pole * vec2(mn / u_res.x, mn / u_res.y);
+      vec2 dvz = uv - pu;
+      vec3 acc = col; float wsz = 1.;
+      float jit = hash(fc * .71 + fract(u_time) * 17.);
+      for (int i = 0; i < ${ZN}; i++) {
+        float kz = (float(i) + jit) / ${ZN}.;
+        float wz = 1. - .55 * kz;
+        vec3 s = texture2D(u_tex, pu + dvz * (1. - u_zb * kz)).rgb;
+        float ls = dot(s, vec3(.299, .587, .114));
+        s *= mix(vec3(1.), mix(vec3(1., .90, .74), vec3(.80, .98, .92), u_mode), .12 + .30 * kz) * (1. + .6 * ls * ls);   // 光痕只带一点金 / 玉的单色倾向，不再红蓝分家；亮度增益很克制
+        acc += s * wz; wsz += wz;
+      }
+      col = mix(col, acc / wsz, clamp(abs(u_zb) * 7., 0., .72));
+    }
+    col += (hash(fc + fract(u_time) * 100.) - .5) * (.028 * (1. - .35 * clamp(abs(u_zb) * 10., 0., 1.)));   // 飞行时颗粒略收，少一点高频闪动
     col = min(col, vec3(.82)) + .18 * (1. - exp(-max(col - .82, 0.) / .18));   // 高光软过渡：亮处不再被硬生生削平成纯白
     gl_FragColor = vec4(col * u_fade, 1.);
   }`;
@@ -787,7 +864,7 @@
   gl.attachShader(progP, vs); gl.attachShader(progP, fsP); gl.bindAttribLocation(progP, 0, 'a'); gl.linkProgram(progP);
   if (!gl.getProgramParameter(progP, gl.LINK_STATUS)) { console.error(gl.getProgramInfoLog(progP)); return; }
   const UP = {};
-  ['u_tex','u_res','u_time','u_fade','u_em','u_base','u_mode','u_cb','u_glow','u_emC'].forEach(n => UP[n] = gl.getUniformLocation(progP, n));
+  ['u_tex','u_res','u_time','u_fade','u_em','u_base','u_mode','u_cb','u_glow','u_emC','u_pole','u_zb'].forEach(n => UP[n] = gl.getUniformLocation(progP, n));
 
   // 乒乓缓冲：上一帧用于时间虚化
   const T = [null, null]; let ti = 0;
@@ -839,7 +916,7 @@
     const SC = [[1,16/15,6/5,4/3,3/2,8/5,9/5,2],                  // 暗：弗里几亚
                 [1,9/8,5/4,11/8,3/2,13/8,15/8,2]];                // 亮：泛音列 11/8 13/8，微失准的异样感
     const ROOT = [55, 49];
-    let ctx, bus, synthOut, master, an, bins, noiseBuf, dFilter, nGain, nFilter, voices = [];
+    let ctx, bus, fx, synthOut, master, an, bins, noiseBuf, dFilter, nGain, nFilter, voices = [];
     let mode = 0, muted = false, ny = .5, spd = 0, running = false;
     let live = true, sLvl = 1, sGoal = 1, sDur = 8;   // 原声：live=是否还在生成新声音，sLvl=淡出进度(1→0)
 
@@ -925,6 +1002,8 @@
       const conv = ctx.createConvolver(); conv.buffer = ir(7);
       const rv = ctx.createGain(); rv.gain.value = .8; conv.connect(rv); rv.connect(synthOut);
       const send = ctx.createGain(); send.gain.value = .65; bus.connect(send); send.connect(conv);
+      fx = ctx.createGain(); fx.connect(master);                                // 穿越音效：直通总线，放自己的音乐时也听得见
+      const fxs = ctx.createGain(); fxs.gain.value = .35; fx.connect(fxs); fxs.connect(conv);
       const dl = ctx.createDelay(2); dl.delayTime.value = .53;
       const fb = ctx.createGain(); fb.gain.value = .48;
       const dlp = ctx.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 1700;
@@ -954,6 +1033,33 @@
       sched(bellEvent, () => wait(6500 * (1 + 1.5*Math.pow(Math.sin(ctx.currentTime*.05), 2))), 1800);
       sched(grain, () => wait(4500 / (1 + spd*3)), 1000);
       sched(thud, () => 14000 + wait(40000), 6000);
+    }
+
+    // 穿越音效：一缕扫过的气流（飞入向上扫、退回向下扫，左右轻轻移动）+ 每一层专属的一声钟（层序号 → 音阶级数）
+    function warp(dir, k, idx){
+      if (!ctx || muted || ctx.state !== 'running') return;
+      const t = ctx.currentTime, dur = 3.2;
+      const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(), p = ctx.createStereoPanner();
+      s.buffer = noiseBuf; s.loop = true; f.type = 'bandpass'; f.Q.value = .7;
+      f.frequency.setValueAtTime(dir > 0 ? 180 : 1500, t); f.frequency.exponentialRampToValueAtTime(dir > 0 ? 1500 : 180, t + dur * .6);
+      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.06 * k, t + dur * .35); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      p.pan.setValueAtTime(dir > 0 ? -.5 : .5, t); p.pan.linearRampToValueAtTime(dir > 0 ? .5 : -.5, t + dur * .7);
+      s.connect(f); f.connect(g); g.connect(p); p.connect(fx);
+      s.start(t, R(0, 2)); s.stop(t + dur + .1);
+      const fr = ROOT[mode] * SC[mode][((idx % 8) + 8) % 8] * 4, bg = ctx.createGain(), lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 2400;
+      bg.gain.setValueAtTime(.0001, t); bg.gain.exponentialRampToValueAtTime(.05 * k, t + .08); bg.gain.exponentialRampToValueAtTime(.0001, t + 5.5);
+      [[1, 1], [2.01, .35], [3.02, .12]].forEach(([r, a]) => {
+        const o = ctx.createOscillator(), og = ctx.createGain();
+        o.frequency.value = fr * r; og.gain.value = a; o.connect(og); og.connect(bg); o.start(t); o.stop(t + 5.7);
+      });
+      bg.connect(lp); lp.connect(fx);
+      // 穿过一层的低频冲击：快速下坠的正弦 + 画面里一圈由中心荡开的脉冲波
+      const sb = ctx.createOscillator(), sg = ctx.createGain();
+      sb.type = 'sine'; sb.frequency.setValueAtTime(115, t); sb.frequency.exponentialRampToValueAtTime(36, t + .9);
+      sg.gain.setValueAtTime(.0001, t); sg.gain.exponentialRampToValueAtTime(.08 * k * k, t + .04); sg.gain.exponentialRampToValueAtTime(.0001, t + 1.2);
+      sb.connect(sg); sg.connect(bus); sb.start(t); sb.stop(t + 1.3);
+      hit(Math.min(1, .28 * k));
     }
 
     function setMode(m){
@@ -1081,7 +1187,7 @@
       });
     }
     return {
-      start, setMode, update, music, toggleMusic, hooks, micToggle,
+      start, setMode, warp, update, music, toggleMusic, hooks, micToggle,
       micState: () => micOn ? (micAge < 1.5 ? 'cal' : 'on') : 'off',
       micLevel: () => micOn && micAge >= 1.5 ? micLvl : 0,
       micVoice: () => micOn && micAge >= 1.5 ? micVoice : 0,
@@ -1196,6 +1302,23 @@
 
   // ============ 滚轮：深度弹簧 → 视角 / 环境 / 时间虚化 ============
   const depth = {x: 0, v: 0};
+  // ============ 无限穿越：滚轮 = 沿曼陀罗中心不断飞入下一层（可逆、无限） ============
+  const TUN_N = 64;                       // 着色器里每层的种子只取决于「层序号 mod 64」
+  const TUN_TL = .9555;                   // 与着色器里的 TL 一致：每层放大 ln(2.6)
+  const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;   // 系统「减少动态效果」：速度、光效、运动模糊都收敛
+  const TUN_E = RM ? .24 : .78, VMAX = RM ? .55 : .95;                   // 光效强度 / 最大飞行速度（层/秒，约 3.1 倍/秒，不会快到刺眼）
+  const tun = {x: 0, sv: 0, v: 0, rush: 0, kick: 0, kt: 0};   // kick：穿过每一层中点时的冲击（kt 为目标，kick 为快起慢落的平滑值）                            // 位置 / 弹簧速度 / 速度 / 归一化速度（-1~1）
+  let tunT = 0, tunIdle = 99, tunDir = 1, lastLyr = 0, layT = 0;
+  const layEl = document.getElementById('lay');
+  const showLayer = n => {
+    layEl.textContent = n === 0 ? 'SURFACE' : 'DEPTH ' + (n < 0 ? '\u2212' : '') + String(Math.abs(n)).padStart(2, '0');
+    layEl.classList.add('on'); clearTimeout(layT); layT = setTimeout(() => layEl.classList.remove('on'), 2600);
+  };
+  const tunPush = d => {                  // d > 0：向中心飞入
+    if (!d) return;
+    tunT += d * (RM ? .6 : .90); tunIdle = 0; tunDir = d > 0 ? 1 : -1;
+    const LEAD = 2.4; tunT = Math.max(tun.x - LEAD, Math.min(tun.x + LEAD, tunT));   // 目标最多领先 2.4 层：猛滚也不会越飞越快
+  };
   let depthT = 0, wheelSpeed = 0, lastLs = 0, lastDepth = 0, fbZoom = 0, fbRot = 0;
   addEventListener('wheel', e => {
     if (e.ctrlKey) return;
@@ -1203,6 +1326,7 @@
     let dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 100 : e.deltaY;
     dy = Math.max(-150, Math.min(150, dy));
     depthT += dy * .004;
+    tunPush(-dy * .00315);
   }, {passive: false});
 
   // 触屏没有滚轮：双指上下滑 / 捏合，等同滚轮，用来变换视角与环境
@@ -1216,7 +1340,7 @@
   addEventListener('pointermove', e => {
     if (e.pointerType !== 'touch' || !tp.has(e.pointerId)) return;
     tp.set(e.pointerId, {x: e.clientX, y: e.clientY});
-    if (tp.size === 2) { const s = gStat(); depthT += (gMidY - s.my) * .008 + (gDist - s.d) * .006; gMidY = s.my; gDist = s.d; }
+    if (tp.size === 2) { const s = gStat(); const dd = (gMidY - s.my) * .008 + (gDist - s.d) * .006; depthT += dd; tunPush(-dd * .72); gMidY = s.my; gDist = s.d; }
   });
   const gEnd = e => { if (e.pointerType !== 'touch') return; tp.delete(e.pointerId); if (tp.size < 2) gesture = false; };
   addEventListener('pointerup', gEnd); addEventListener('pointercancel', gEnd);
@@ -1224,6 +1348,7 @@
     if (e.target.closest && e.target.closest('#mus')) return;
     if (e.code === 'Space'){ e.preventDefault(); act(); }
     else if (e.code === 'KeyM') AE.mute();
+    else if (e.code === 'KeyF' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) { tunT = Math.round(tun.x) + (e.shiftKey ? -3 : 3); tunDir = e.shiftKey ? -1 : 1; tunIdle = 0; }   // 俯冲：自动连穿 3 层
   });
   document.addEventListener('visibilitychange', () => { document.hidden ? AE.suspend() : AE.resume(); });
 
@@ -1343,7 +1468,7 @@
     // 视场：滚轮推拉 + 呼吸开合 + 转得快时轻微拉伸
     const angSp = Math.min(Math.hypot(yawV - cam.pyaw, pitchV - cam.ppitch) / Math.max(dt, 1e-3), 4);
     cam.ang += (angSp - cam.ang) * (1 - Math.exp(-dt * 6));
-    cam.foc = .62 * Math.exp(-.30 * Math.sin(depth.x * .45)) * (1 - .06 * (breath - .5)) * (1 - .035 * Math.min(cam.ang / 2, 1));
+    cam.foc = .62 * Math.exp(-(RM ? .12 : .15) * tun.rush) * (1 - (RM ? .01 : .035) * tun.kick) * (1 - .06 * (breath - .5)) * (1 - .035 * Math.min(cam.ang / 2, 1));
     // 滚轮的「俯仰」也并入镜头
     const pitchW = 0;   // 缩放不再带动俯仰
     // 陀螺仪平滑
@@ -1354,10 +1479,10 @@
     for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) camBuf[j * 3 + i] = M[j][i];
     // 镜头位置：呼吸般微晃 + 鼠标平移 → 近层、远层星尘错位移动
     // 前后推进：慢速自动往返（约 90 秒一程）+ 滚轮；镜头真的在空间里前后移动，近层星尘与雾幕随之掠过
-    cam.dolly = .55 * Math.sin(t * .07) + .3 * Math.sin(t * .031 + 1.) - .9 * Math.sin(depth.x * .45) + .12 * (breath - .5);
+    cam.dolly = .55 * Math.sin(t * .07) + .3 * Math.sin(t * .031 + 1.) + .40 * tun.rush + .12 * (breath - .5);
     const dv = (cam.dolly - cam.pdolly) / Math.max(dt, 1e-3); cam.pdolly = cam.dolly;   // 推进速度 → 光痕
     cam.zvS += (Math.max(-3, Math.min(3, dv)) - cam.zvS) * (1 - Math.exp(-dt * 5));
-    cam.zv = Math.max(-1, Math.min(1, cam.zvS * 1.6));
+    cam.zv = Math.max(-1, Math.min(1, cam.zvS * 1.6 + tun.rush * .45));
     cam.eth += (wheelSpeed - cam.eth) * (1 - Math.exp(-dt * (wheelSpeed > cam.eth ? 1.4 : .35)));   // 缩放停下后，空灵感缓缓退去
     cposBuf[0] = .22 * Math.sin(t * .13) + fx * .26;
     cposBuf[1] = .16 * Math.cos(t * .17) - fy * .20;
@@ -1662,10 +1787,36 @@
     speedF = Math.min(Math.hypot(velS.x, velS.y) * .8, 1);
 
     spring(depth, depthT, dt, 2.0, 1);
+    // 穿越：停手后轻轻吸附到整层（推过约 22% 就穿过去，否则退回），避免停在半透明叠层上
+    tunIdle += dt;
+    if (tunIdle > .3) {
+      const f = tunT - Math.floor(tunT);
+      const goal = tunDir > 0 ? (f > .28 ? Math.ceil(tunT) : Math.floor(tunT)) : (f < .72 ? Math.floor(tunT) : Math.ceil(tunT));
+      tunT += (goal - tunT) * (1 - Math.exp(-dt * 4.5));   // 目标先缓缓移向整层，再由弹簧二次平滑
+      if (Math.abs(goal - tunT) < .002) tunT = goal;
+    }
+    // 临界阻尼弹簧：加速度是连续的，滚轮的每一格只改变「目标」，速度不会跳变 → 丝滑；速度封顶，永不刺眼；小步长积分，掉帧时也稳定
+    for (let rem = dt; rem > 1e-5;) {
+      const h = Math.min(rem, 1 / 120); rem -= h;
+      const W0 = 4.6, a = W0 * W0 * (tunT - tun.x) - 2 * W0 * tun.sv;
+      tun.sv = Math.max(-VMAX, Math.min(VMAX, tun.sv + a * h));
+      tun.x += tun.sv * h;
+    }
+    if (Math.abs(tunT - tun.x) < .0004 && Math.abs(tun.sv) < .004) { tun.x = tunT; tun.sv = 0; }   // 到站后精确落在整层上，着色器回到单层快路径
+    tun.v = tun.sv;
+    tun.rush += (tun.sv / VMAX - tun.rush) * (1 - Math.exp(-dt * 6));
+    tun.kt *= Math.exp(-dt * 2.2); tun.kick += (tun.kt - tun.kick) * (1 - Math.exp(-dt * 6));   // 冲击只是一次轻轻的「呼吸」：约 0.17s 升起、约 0.5s 退去
+    // 穿过每一层的「中点」时：一缕气流 + 这一层专属的一声钟，并轻轻浮出深度标记
+    const lyr = Math.floor(tun.x + .5);
+    if (lyr !== lastLyr) {
+      const dirL = lyr > lastLyr ? 1 : -1; lastLyr = lyr;
+      tun.kt = Math.max(tun.kt, (.3 + .7 * Math.min(1, Math.abs(tun.sv) / VMAX)) * (RM ? .3 : 1));
+      if (real > 1) { AE.on() && AE.warp(dirL, (.4 + .6 * Math.min(1, Math.abs(tun.sv) / VMAX)) * (RM ? .5 : 1), lyr); showLayer(lyr); }
+    }
     const wsGoal = Math.min(Math.abs(depth.v) * 1.1, 1);
     wheelSpeed += (wsGoal - wheelSpeed) * (1 - Math.exp(-dt * (wsGoal > wheelSpeed ? 6 : 2.2)));
     const ls = .30 * Math.sin(depth.x * .45);
-    const zf = Math.max(-.03, Math.min(.03, (ls - lastLs) * 2.2));
+    const zf = Math.max(-.05, Math.min(.05, TUN_TL * tun.sv * dt));   // 运动补偿：上一帧按这一帧的缩放量重投影，时间融合不会重影，反而抑制丝线闪烁
     const rf = Math.max(-.03, Math.min(.03, (depth.x - lastDepth) * 0));   // 缩放不再带动画面旋转
     lastLs = ls; lastDepth = depth.x;
     fbZoom += (zf - fbZoom) * .5; fbRot += (rf - fbRot) * .5;
@@ -1749,10 +1900,15 @@
     gl.uniform1f(U.u_voice, voiceV); gl.uniform1f(U.u_low, env.low); gl.uniform1f(U.u_mid, env.mid); gl.uniform1f(U.u_high, env.high);
     gl.uniform1f(U.u_pulse, pulse); gl.uniform1f(U.u_pAge, pAge);
     gl.uniform1f(U.u_depth, depth.x);
-    gl.uniform1f(U.u_fb, Math.max(fbAmt, .5 * stallK, .10 * Math.min(1, Math.abs(cam.zv) * 1.2)));
+    {
+      const tnR = Math.round(tun.x), tnSnap = Math.abs(tun.x - tnR) < .003;
+      const tnI = tnSnap ? tnR : Math.floor(tun.x), tnF = tnSnap ? 0 : tun.x - tnI;
+      gl.uniform1f(U.u_tunF, tnF); gl.uniform1f(U.u_tunI, ((tnI % TUN_N) + TUN_N) % TUN_N); gl.uniform1f(U.u_tunP, tun.x); gl.uniform1f(U.u_tunE, TUN_E); gl.uniform2f(U.u_rk, tun.rush * (RM ? .3 : 1), tun.kick);
+    }
+    gl.uniform1f(U.u_fb, Math.max(fbAmt, .5 * stallK, .10 * Math.min(1, Math.abs(cam.zv) * 1.2), .18 * Math.min(1, Math.abs(tun.rush) * 1.3)));
     gl.uniform1f(U.u_fbZoom, fbZoom + .006 * stallK);
     gl.uniform1f(U.u_fbRot, fbRot);
-    gl.uniformMatrix3fv(U.u_cam, false, camBuf); gl.uniform1f(U.u_foc, cam.foc); gl.uniform3fv(U.u_cpos, cposBuf); gl.uniform1f(U.u_dolly, cam.dolly); gl.uniform1f(U.u_zv, cam.zv); gl.uniform1f(U.u_eth, cam.eth); gl.uniform2f(U.u_fbShift, cs.shx, cs.shy);
+    gl.uniformMatrix3fv(U.u_cam, false, camBuf); gl.uniform1f(U.u_foc, cam.foc); gl.uniform3fv(U.u_cpos, cposBuf); gl.uniform1f(U.u_dolly, cam.dolly); gl.uniform1f(U.u_zv, cam.zv); gl.uniform1f(U.u_eth, cam.eth); gl.uniform2f(U.u_fbShift, cs.shx - poleX * fbZoom, cs.shy - poleY * fbZoom);   // 缩放以极点为中心，而不是屏幕中心
     gl.uniform4fv(U.u_em, emBuf); gl.uniform3fv(U.u_emC, emC); gl.uniform1f(U.u_rs, RS);
     gl.uniform4fv(U.u_sw, swBuf); gl.uniform4fv(U.u_sk, skBuf); gl.uniform1f(U.u_hue, hueV);
 
@@ -1770,7 +1926,8 @@
     gl.uniform1i(UP.u_tex, 0);
     gl.uniform2f(UP.u_res, W, H);
     gl.uniform1f(UP.u_time, time);
-    gl.uniform1f(UP.u_glow, Math.min(1.6, .38 + .22 * breath + .9 * cgV + .25 * cgL));
+    gl.uniform1f(UP.u_glow, Math.min(1.15, .28 + .16 * breath + .62 * cgV + .18 * cgL + (RM ? 0 : .06 * Math.abs(tun.rush))));
+    gl.uniform2f(UP.u_pole, poleX, poleY); gl.uniform1f(UP.u_zb, (tun.rush * (RM ? .075 : .10) + (tun.sv >= 0 ? 1 : -1) * tun.kick * (RM ? 0 : .01)) * TUN_E * (.4 + .6 * pvJ));
     gl.uniform1f(UP.u_fade, fade * fade * (3 - 2 * fade));
     gl.uniform3fv(UP.u_emC, emC);
     gl.uniform4fv(UP.u_em, emBuf); gl.uniform1f(UP.u_base, postBase); gl.uniform1f(UP.u_mode, modeV); gl.uniform4fv(UP.u_cb, cb);
