@@ -683,6 +683,37 @@
       float far = clamp(-u_dolly * .55, 0., 1.);
       col = mix(col, col * .72 + air * .05 * wv, far * .55);
       col += air * u_eth * .04 * (.3 + .7 * wv);
+
+      // —— 穿雾光束：曼陀罗中心的光穿过悬在空间里的两层雾，雾被照亮处成为光柱 ——
+      // 光柱的角度、雾的密度都在「世界方向 rd」里采样：镜头一转，光柱与雾块跟着空间走；
+      // 近层 / 远层按不同比例吃镜头位移（u_cpos），彼此错位 = 视差。收束在极点 pp（透视消失点）。
+      // 只在呼吸顶点 / 低音 / 人声 / 光环扩散（u_cg 缓动驱动）时升起，平时几乎不可见；减少动态效果时只剩约三成
+      {
+        float bd = clamp(u_cg.x * 1.15 + .22 * smoothstep(.8, 1., br) + .25 * u_cg.z, 0., 1.);
+        float bk = bd * bd * min(1., u_tunE / .78);
+        if (bd > .06 && pvis > .01) {   // 平时（光束几乎不可见时）整段跳过，不花任何算力
+          float ba = atan(rd.y, rd.x);                                        // 绕世界极轴的方位角
+          vec2 cd = vec2(cos(ba), sin(ba));
+          float tb = u_time * .35;
+          // 两层雾：近层小而淡、移得多；远层大而厚、移得少
+          vec3 fp1 = vec3(.45, .25, -.35) + cp * .55, fp2 = vec3(-.5, -.2, .4) + cp * .18;
+          float f1 = fog(rd, fp1, 1.9, 1.7, tb), f2 = fog(rd, fp2, 3.6, 1.15, tb + 9.);
+          float fogS = clamp(f1 * .65 + f2 * .75, 0., 1.);
+          // 光柱：两层方位噪声（近层随 cp 错位），缝隙宽、边缘软 —— 不是一圈整齐的放射线
+          float s1 = vn3(vec3(cd * 2.3 + cp.xy * .35, tb * .09)) * .6 + vn3(vec3(cd * 5.1 - cp.xy * .2 + 4.1, -tb * .07)) * .4;
+          float s2 = vn3(vec3(cd * 1.5 - cp.xy * .10 + 8.2, tb * .05)) * .7 + vn3(vec3(cd * 3.7 + 2.7, tb * .06)) * .3;
+          float shaft = smoothstep(.50, .86, s1) * .65 + smoothstep(.52, .88, s2) * .55;
+          // 径向：从喉口处淡入、向外衰减；飞行时沿径向略微拉长，与星尘光痕呼应
+          float reach = (.30 + .55 * bd) * (1. + .6 * flyK);
+          float rad = smoothstep(.015, .11, prr) * exp(-prr / reach);
+          float lumB = dot(col, vec3(.299, .587, .114));
+          float vis = pvis * (1. - .8 * clamp(lumB * 2.0, 0., 1.));            // 让给明亮的丝线，光束不盖住曼陀罗
+          float beam = shaft * (.25 + .75 * fogS) * rad * vis;                  // 雾越浓，光柱越亮：被雾照亮
+          float haze = fogS * rad * vis * .30;                                  // 雾本身被微微照亮，光柱之间也有一层体积感
+          vec3 bc = mix(lc, vec3(1.), .18);
+          col += bc * (beam * .13 + haze * .035) * bk;
+        }
+      }
     }
 
     // 影调映射 (ACES 近似)
@@ -819,8 +850,12 @@
         vec2 svv = u_mb * aspm;
         float jt = hash(fc * .37 + fract(u_time * 3.1) * 29.);
         vec3 ma = vec3(0.); float mw = 0.;
+        // 按拖影的实际像素长度决定采样数：甩得猛、拖影长时仍用满 ${MBN} 个（与之前完全一致）；只有轻微转动、拖影很短时才少采几个，
+        // 采样间距始终 ≥ 约 4 像素，且带抖动 + 胶片颗粒，所以看不出差别
+        float nS = clamp(ceil((length(u_mb) + 2. * u_fo) * mn / 4.), 4., ${MBN}.);
         for (int i = 0; i < ${MBN}; i++) {
-          float f = (float(i) + jt) / ${MBN}.;
+          if (float(i) >= nS) break;
+          float f = (float(i) + jt) / nS;
           float th = float(i) * 2.39996 + jt * 6.2832;
           vec2 uvs = uv + svv * (f - .5) + vec2(cos(th), sin(th)) * sqrt(f) * u_fo * aspm;
           vec3 s = vec3(texture2D(u_tex, uvs + svv * .06).r, texture2D(u_tex, uvs).g, texture2D(u_tex, uvs - svv * .06).b);
@@ -980,23 +1015,50 @@
       setTimeout(loop, first);
     };
 
+    // ---- 空间音频：声音被钉在世界里的某个方向上（HRTF 双耳渲染），听者的朝向跟随镜头 ----
+    // 世界坐标与镜头一致：右 = +x，上 = +y，正前方（曼陀罗极点）= −z。
+    // 方向：约一半的声音聚在开场正前方附近，其余散落在四周甚至身后——转过头去，才会发现它们。
+    function rndDir(){
+      let yaw = R(-Math.PI, Math.PI); if (Math.random() < .5) yaw *= .42;
+      const pit = R(-.55, .55), cp = Math.cos(pit);
+      return [Math.sin(yaw) * cp, Math.sin(pit), -Math.cos(yaw) * cp];
+    }
+    function mkPan(d, dist){
+      const p = ctx.createPanner();
+      p.panningModel = 'HRTF'; p.distanceModel = 'inverse';
+      p.refDistance = 1; p.maxDistance = 30; p.rolloffFactor = .35;
+      const x = d[0] * dist, y = d[1] * dist, z = d[2] * dist;
+      if (p.positionX) { p.positionX.value = x; p.positionY.value = y; p.positionZ.value = z; } else p.setPosition(x, y, z);
+      return p;
+    }
+    // 听者朝向 = 镜头：前 = −（后向量），上 = 上向量。镜头已经平滑过，这里直接跟
+    function listen(M){
+      if (!ctx) return;
+      const L = ctx.listener, t = ctx.currentTime;
+      if (L.forwardX) {
+        L.forwardX.setValueAtTime(-M[6], t); L.forwardY.setValueAtTime(-M[7], t); L.forwardZ.setValueAtTime(-M[8], t);
+        L.upX.setValueAtTime(M[3], t); L.upY.setValueAtTime(M[4], t); L.upZ.setValueAtTime(M[5], t);
+      } else if (L.setOrientation) L.setOrientation(-M[6], -M[7], -M[8], M[3], M[4], M[5]);
+    }
+
     function bell(k){
       k = k || 1;
       const t = ctx.currentTime, f = ROOT[mode] * pick(SC[mode]) * pick([1,2,2,4,4]) * (1 + R(-.003,.003));
       const car = ctx.createOscillator(), mod = ctx.createOscillator();
-      const mg = ctx.createGain(), g = ctx.createGain(), pan = ctx.createStereoPanner();
+      const dir = rndDir(), dist = R(2.2, 5.5);
+      const mg = ctx.createGain(), g = ctx.createGain(), pan = mkPan(dir, dist);
       car.frequency.value = f;
       mod.frequency.value = f * pick([1.414, 2.76, 3.5, 5.19, .5]);  // 非谐波比例 = 金属/幽灵感
       const dur = R(5,12), rev = k === 1 && Math.random() < .55, att = rev ? dur*.7 : R(.15,.6);
       mg.gain.setValueAtTime(f * R(.3,1.4), t); mg.gain.exponentialRampToValueAtTime(1, t + dur);
       g.gain.setValueAtTime(.0001, t);
-      g.gain.exponentialRampToValueAtTime(R(.025,.07) * k, t + att);
+      g.gain.exponentialRampToValueAtTime(R(.025,.07) * k * 1.4, t + att);   // ×1.4：补偿空间衰减，整体响度与之前相当
       g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-      pan.pan.value = R(-.9,.9);
-      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1600;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1950 - 140 * dist;   // 越远越暗：空气吸收高频
       mod.connect(mg); mg.connect(car.frequency); car.connect(g); g.connect(lp); lp.connect(pan); pan.connect(bus);
       car.start(t); mod.start(t); car.stop(t+dur+.1); mod.stop(t+dur+.1);
-      setTimeout(() => { if (sLvl > .15) hit(R(.5,1)); }, att*1000);
+      // 钟声响起的那一刻：中心脉冲 + 在它所在的方向上（若在视野内）荡开一圈涟漪，声画合一
+      setTimeout(() => { if (sLvl > .15) { hit(R(.5,1)); if (hooks.bellAt) hooks.bellAt(dir); } }, att*1000);
     }
     function bellEvent(){
       const n = Math.random() < .1 ? 2 : 1;   // 偶尔成簇
@@ -1004,11 +1066,10 @@
     }
     function grain(){
       const t = ctx.currentTime, s = ctx.createBufferSource(), f = ctx.createBiquadFilter();
-      const g = ctx.createGain(), p = ctx.createStereoPanner(), d = R(.25,.8);
+      const g = ctx.createGain(), p = mkPan(rndDir(), R(1.6, 4)), d = R(.25,.8);
       s.buffer = noiseBuf; f.type = 'bandpass'; f.frequency.value = R(500,2200); f.Q.value = R(3,10);
-      p.pan.value = R(-1,1);
       g.gain.setValueAtTime(.0001, t);
-      g.gain.exponentialRampToValueAtTime(R(.006,.02), t + d*.5);
+      g.gain.exponentialRampToValueAtTime(R(.006,.02) * 1.4, t + d*.5);
       g.gain.exponentialRampToValueAtTime(.0001, t + d);
       s.connect(f); f.connect(g); g.connect(p); p.connect(bus);
       s.start(t, R(0,2)); s.stop(t + d + .05);
@@ -1230,7 +1291,7 @@
       });
     }
     return {
-      start, setMode, warp, update, music, toggleMusic, hooks, micToggle,
+      start, setMode, warp, update, music, toggleMusic, hooks, micToggle, listen,
       micState: () => micOn ? (micAge < 1.5 ? 'cal' : 'on') : 'off',
       micLevel: () => micOn && micAge >= 1.5 ? micLvl : 0,
       micVoice: () => micOn && micAge >= 1.5 ? micVoice : 0,
@@ -1605,6 +1666,17 @@
 
   AE.hooks.fade = () => say('fade', 'Original sound fading', 8500);
   AE.hooks.back = () => { say('end', 'Original sound returns', 5000); poke(5200); };
+  // 钟声 → 画面：把声音所在的世界方向投影到当前镜头的屏幕上；在视野内就在那里荡开一圈涟漪。身后 / 视野外的钟声只有声音，等你转过头去
+  AE.hooks.bellAt = d => {
+    const rx = d[0]*camBuf[0] + d[1]*camBuf[1] + d[2]*camBuf[2];     // 世界方向 → 镜头坐标（右 / 上 / 后）
+    const ry = d[0]*camBuf[3] + d[1]*camBuf[4] + d[2]*camBuf[5];
+    const rz = d[0]*camBuf[6] + d[1]*camBuf[7] + d[2]*camBuf[8];
+    if (rz > -.25) return;
+    const W = canvas.width, H = canvas.height, mn = Math.min(W, H), k = cam.foc / -rz;
+    const x = W * .5 + rx * k * mn, y = H * .5 + ry * k * mn;
+    if (x < W * .04 || x > W * .96 || y < H * .04 || y > H * .96) return;
+    spawnRipple(x, y, 0, false);
+  };
 
   function loadMusic(file){
     if (!file) return;
@@ -1821,7 +1893,7 @@
     let dt = Math.min(rawDt, .05), tdt = Math.min(rawDt, .12);   // tdt：时间轴补偿，低帧率时流动不再变成慢动作
     last = now;
     // 自适应画质：持续掉帧时逐级降低场景渲染分辨率
-    if (rawDt < .2) perfEma += (rawDt - perfEma) * .05;
+    if (rawDt < .2 && cam.ang < 1.2) perfEma += (rawDt - perfEma) * .05;   // 甩镜头瞬间的掉帧不计入：避免一次猛甩就把整体分辨率永久降一档
     if (perfEma > .024 && now - lastDrop > 2500 && RSI < RSL.length - 1) { RS = RSL[++RSI]; lastDrop = now; perfEma = .0167; resize(); }
     real += dt;
     directorUpdate(dt);
@@ -1939,6 +2011,7 @@
     for (let i = 0; i < 4; i++) cb[i] = cbf(breathPhase - i * Math.PI / 2);
     const postBase = .24 + .24 * wheelSpeed;
     const cs = camStep(dt, real, W, H, mn, breath);
+    if (AE.on()) AE.listen(camBuf);   // 听者朝向 = 镜头朝向：转头时，钟声留在原来的方向上
     const fbAmt = Math.max(fbAmt0, cs.fb);
     const rcz = -camBuf[8], pvJ = (() => { const x = Math.max(0, Math.min(1, (rcz + .35) / .35)); return 1 - x * x * (3 - 2 * x); })();
     const poleX = -camBuf[2] * pvJ * cam.foc / Math.max(-rcz, .02), poleY = -camBuf[5] * pvJ * cam.foc / Math.max(-rcz, .02);
