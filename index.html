@@ -247,7 +247,8 @@
 
   const vsSrc = `attribute vec2 a; void main(){ gl_Position = vec4(a,0.,1.); }`;
 
-  const fsSrc = `
+  const HASDER = !!gl.getExtension('OES_standard_derivatives');   // 用来精确得知「一个像素有多大」，让星点永远不比像素更细
+  const fsSrc = `${HASDER ? '#extension GL_OES_standard_derivatives : enable\n#define HAS_DER\n' : ''}
   precision highp float;
   uniform vec2  u_res;
   uniform float u_time, u_breath, u_mode;
@@ -277,6 +278,7 @@
   uniform float u_dolly;   // 前后推进：-1 退远 ~ +1 逼近
   uniform vec2  u_fbShift; // 镜头转动时，上一帧的屏幕位移
   #define TAU 6.28318530718
+  float g_pxq;   // 没有导数扩展时的备用像素尺寸估计
   float g_bl;   // 缩放时的失焦量：近处光点虚化得多，远处几乎不虚化
 
   float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -344,6 +346,12 @@
   // 层与层首尾都淡到 0，所以不会有「闪现」；所有层沿同一个前进轴向外舒展，天然就是穿梭 + 视差。
   vec3 starLayer(vec2 q, float scale, float seed, float dep, float bl, vec2 sd, float S){
     vec2 g = q * scale, id = floor(g), fr = fract(g) - .5;
+    // 一个像素在格子坐标里有多大（必须在任何提前返回之前取导数）
+#ifdef HAS_DER
+    vec2 gw = fwidth(g); float pw = .4 * (gw.x + gw.y);
+#else
+    float pw = scale * g_pxq;
+#endif
     float h = hash(id + seed);
     if (h > .17) return vec3(0.);                                       // 稀疏：只有约 17% 的格子有星
     float mag = pow(hash(id + seed + 7.7), 5.5);                        // 星等：绝大多数极暗极小，极少数明亮
@@ -353,8 +361,13 @@
     float r0 = (.022 + .042 * mag) * f;
     float dpar = dot(dd, sd), dper = dd.x * sd.y - dd.y * sd.x;          // 飞行时：星点沿径向拉成光痕（折越快越长）
     float d2 = dpar * dpar / ((1. + S) * (1. + S)) + dper * dper;
-    float core = exp(-d2 / (r0 * r0)) / pow(f, 1.5);
-    float halo = exp(-d2 / (r0 * r0 * 16.)) * .09 * (.35 + mag) / pow(f, 1.1);   // 微微的炫光
+    // 真实的点光源经过镜头后总有一个有限宽度的光斑，总光量不变。之前极小的星比一个像素还细，
+    // 镜头稍有移动 / 慢速漂流，它就在「刚好落在像素中心」和「落在两个像素之间」来回跳 = 看起来在飞快闪烁。
+    // 现在：光斑最细不小于约 1 个像素，并按面积把亮度摊开（总光量守恒），于是随镜头移动是平滑、稳定的。
+    float rE = max(r0, 1.3 * pw), amp = (r0 * r0) / (rE * rE);
+    float core = exp(-d2 / (rE * rE)) * amp / pow(f, 1.5);
+    float rH = max(4. * r0, 2.3 * pw);
+    float halo = exp(-d2 / (rH * rH)) * (16. * r0 * r0 / (rH * rH)) * .09 * (.35 + mag) / pow(f, 1.1);   // 微微的炫光
     vec2 aw = abs(fr);
     float win = 1. - smoothstep(.27, .49, max(aw.x, aw.y));
     float tw = 1. + .10 * sin(u_time * (.25 + h * 3.) + h * 400.);      // 极轻的呼吸式闪烁，不再跳动
@@ -649,6 +662,7 @@
       vec3 cp = u_cpos; float cl = length(cp); if (cl > .6) cp *= .6 / cl;
       float tt = t * 3.;
       g_bl = clamp(abs(u_zv) * 1.1 + u_eth * .9, 0., 1.);
+      g_pxq = .55 / (mn * u_rs * max(u_foc, .2));
       // 球面方向 → 以正前方为中心的平面坐标：深度循环就是沿前进轴的放大（星点从中心向外流淌，近快远慢）
       float kRot = .38 * u_tunE;   // 斗转星移：星空随穿越缓缓旋转（与层间扭转同向），平时也有极慢的天球转动
       vec2 q0 = rd.xy / (1.25 - rd.z) * rot(kRot * u_tunP + t * .03);
