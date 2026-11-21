@@ -236,7 +236,7 @@
     <small>mp3 · m4a · wav · flac</small></div></div>
 <input type="file" id="musF" accept="audio/*,.mp3,.m4a,.wav,.ogg,.flac,.aac" hidden>
 <script>
-(function(){
+(async function(){
   const canvas = document.getElementById('c');
   const COARSE = matchMedia('(pointer:coarse)').matches || matchMedia('(hover:none)').matches;   // 触屏设备：手机 / 平板
   const BT = COARSE ? 3 : 6, ZN = COARSE ? 7 : 11;   // ZN：穿越径向光痕采样数                                                                    // 泛光采样数：触屏减半，省电省 GPU
@@ -701,26 +701,12 @@
   function sh(type, src){
     const s = gl.createShader(type);
     gl.shaderSource(s, src); gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s)); return null; }
     return s;
   }
   const vs = sh(gl.VERTEX_SHADER, vsSrc), fs = sh(gl.FRAGMENT_SHADER, fsSrc);
-  if (!vs || !fs) return;
   const prog = gl.createProgram();
   gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.bindAttribLocation(prog, 0, 'a'); gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { console.error(gl.getProgramInfoLog(prog)); return; }
-  gl.useProgram(prog);
-
-  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
-  const loc = gl.getAttribLocation(prog, 'a');
-  gl.enableVertexAttribArray(loc);
-  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-
-  const U = {};
-  ['u_res','u_time','u_mouse','u_par','u_vel','u_presence','u_press','u_speed','u_trail','u_rc','u_rp','u_rq','u_rr','u_breath','u_mode','u_depth','u_fb','u_fbZoom','u_fbRot','u_prev','u_low','u_mid','u_high','u_voice','u_pulse','u_pAge','u_em','u_rs','u_sw','u_sk','u_hue','u_cam','u_foc','u_cpos','u_fbShift','u_dolly','u_zv','u_eth','u_emC','u_cg','u_tunF','u_tunI','u_tunP','u_tunE','u_rk'].forEach(n => U[n] = gl.getUniformLocation(prog, n));
-
-
+  const MBN = COARSE ? 6 : 9;
   const fsPresent = `
   precision highp float;
   #define TAU 6.28318530718
@@ -728,7 +714,8 @@
   uniform vec4 u_em[5];
   uniform vec4 u_cb;   // 四角呼吸 (左上, 右上, 右下, 左下)，相位依次错开 1/4 周期
   uniform vec3 u_emC[5]; // 每圈光环锁定的中心（单位同 p）
-  uniform vec2 u_pole; uniform float u_zb;   // 穿越：极点屏幕位置 / 径向运动模糊强度（有符号：>0 飞入）
+  uniform vec2 u_pole; uniform float u_zb;
+  uniform vec2 u_mb; uniform float u_fo;   // 镜头运动：拖影向量（mn 单位）/ 失焦半径   // 穿越：极点屏幕位置 / 径向运动模糊强度（有符号：>0 飞入）
   #define BL4(v) mix(mix(v.w, v.z, uv.x), mix(v.x, v.y, uv.x), uv.y)
   float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
   mat2 rot(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
@@ -809,6 +796,27 @@
       col *= tintMul;
       col += vec3(.004, .003, .008) * cA;
     }
+    // —— 镜头运动：甩镜头的方向性运动模糊 + 沿运动轴的色散 + 失焦呼吸（静止时完全不走这段）——
+    {
+      float mbL = length(u_mb);
+      if (mbL > .0012 || u_fo > .0004) {
+        float mK = max(smoothstep(.0012, .006, mbL), smoothstep(.0004, .002, u_fo));
+        vec2 aspm = vec2(mn / u_res.x, mn / u_res.y);
+        vec2 svv = u_mb * aspm;
+        float jt = hash(fc * .37 + fract(u_time * 3.1) * 29.);
+        vec3 ma = vec3(0.); float mw = 0.;
+        for (int i = 0; i < ${MBN}; i++) {
+          float f = (float(i) + jt) / ${MBN}.;
+          float th = float(i) * 2.39996 + jt * 6.2832;
+          vec2 uvs = uv + svv * (f - .5) + vec2(cos(th), sin(th)) * sqrt(f) * u_fo * aspm;
+          vec3 s = vec3(texture2D(u_tex, uvs + svv * .06).r, texture2D(u_tex, uvs).g, texture2D(u_tex, uvs - svv * .06).b);
+          float l = dot(s, vec3(.299, .587, .114));
+          float wt = 1. + 3. * l * l;                 // 亮点拖成明亮的光痕，而不是被平均掉
+          ma += s * wt; mw += wt;
+        }
+        col = mix(col, ma / mw * tintMul, mK);
+      }
+    }
     // —— 泛光：把亮处的丝线晕成柔和的光（两圈采样，角度带轻微抖动，混入胶片颗粒里不显脏）——
     {
       vec2 asp2 = vec2(mn / u_res.x, mn / u_res.y);
@@ -862,9 +870,30 @@
   const fsP = sh(gl.FRAGMENT_SHADER, fsPresent);
   const progP = gl.createProgram();
   gl.attachShader(progP, vs); gl.attachShader(progP, fsP); gl.bindAttribLocation(progP, 0, 'a'); gl.linkProgram(progP);
+  // —— 等待着色器在后台并行编译：页面先画出 ENTER 界面，不再卡死在黑屏 / 白屏 ——
+  canvas.addEventListener('webglcontextlost', e => e.preventDefault());
+  canvas.addEventListener('webglcontextrestored', () => location.reload());
+  await Promise.race([new Promise(r => requestAnimationFrame(() => setTimeout(r, 0))), new Promise(r => setTimeout(r, 150))]);
+  const pce = gl.getExtension('KHR_parallel_shader_compile');
+  if (pce) await new Promise(r => { const t = () => (gl.getProgramParameter(prog, pce.COMPLETION_STATUS_KHR) && gl.getProgramParameter(progP, pce.COMPLETION_STATUS_KHR)) ? r() : setTimeout(t, 30); t(); });
+  if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(fs)); return; }
+  if (!gl.getShaderParameter(fsP, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(fsP)); return; }
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { console.error(gl.getProgramInfoLog(prog)); return; }
   if (!gl.getProgramParameter(progP, gl.LINK_STATUS)) { console.error(gl.getProgramInfoLog(progP)); return; }
   const UP = {};
-  ['u_tex','u_res','u_time','u_fade','u_em','u_base','u_mode','u_cb','u_glow','u_emC','u_pole','u_zb'].forEach(n => UP[n] = gl.getUniformLocation(progP, n));
+  ['u_tex','u_res','u_time','u_fade','u_em','u_base','u_mode','u_cb','u_glow','u_emC','u_pole','u_zb','u_mb','u_fo'].forEach(n => UP[n] = gl.getUniformLocation(progP, n));
+  gl.useProgram(prog);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, 'a');
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+  const U = {};
+  ['u_res','u_time','u_mouse','u_par','u_vel','u_presence','u_press','u_speed','u_trail','u_rc','u_rp','u_rq','u_rr','u_breath','u_mode','u_depth','u_fb','u_fbZoom','u_fbRot','u_prev','u_low','u_mid','u_high','u_voice','u_pulse','u_pAge','u_em','u_rs','u_sw','u_sk','u_hue','u_cam','u_foc','u_cpos','u_fbShift','u_dolly','u_zv','u_eth','u_emC','u_cg','u_tunF','u_tunI','u_tunP','u_tunE','u_rk'].forEach(n => U[n] = gl.getUniformLocation(prog, n));
+
+
 
   // 乒乓缓冲：上一帧用于时间虚化
   const T = [null, null]; let ti = 0;
@@ -1354,7 +1383,7 @@
 
 
   // ============ 镜头：站在包围球中央环视（拖动 / 惯性 / 自动漂移 / 陀螺仪） ============
-  const cam = {zv: 0, zvS: 0, pdolly: 0, eth: 0, roll: 0, dolly: 0, yaw: 0, pitch: 0, vy: 0, vp: 0, pendY: 0, pendP: 0, drift: 0, lastIn: -9, foc: .62, pyaw: 0, ppitch: 0, ang: 0};
+  const cam = {zv: 0, zvS: 0, pdolly: 0, eth: 0, roll: 0, dolly: 0, yaw: 0, pitch: 0, vy: 0, vp: 0, pendY: 0, pendP: 0, drift: 0, lastIn: -9, foc: .62, pyaw: 0, ppitch: 0, ang: 0, ok: false, ys: 0, ps: 0, yvS: 0, pvS: 0, pk: 0, bank: 0, fo: 0, mbx: 0, mby: 0};
   const drg = {down: false, id: -1, sx: 0, sy: 0, lx: 0, ly: 0, lt: 0, active: false};
   let dragSuppress = false;
   const cmul = (A, v) => [A[0][0]*v[0] + A[1][0]*v[1] + A[2][0]*v[2], A[0][1]*v[0] + A[1][1]*v[1] + A[2][1]*v[2], A[0][2]*v[0] + A[1][2]*v[1] + A[2][2]*v[2]];
@@ -1450,7 +1479,7 @@
     cam.yaw += cam.pendY; cam.pitch += cam.pendP; cam.pendY = cam.pendP = 0;
     if (!drg.active) {
       cam.yaw += cam.vy * dt; cam.pitch += cam.vp * dt;
-      const dk = Math.exp(-dt * 1.7); cam.vy *= dk; cam.vp *= dk;
+      const sp0 = Math.hypot(cam.vy, cam.vp), dk = Math.exp(-dt * (RM ? 2.4 : 1.1 + .45 * Math.min(sp0, 5))); cam.vy *= dk; cam.vp *= dk;   // 速度越大阻尼越大，尾段拖得长而柔
     }
     const busy = drg.active || Math.hypot(cam.vy, cam.vp) > .05 || t - cam.lastIn < 1.2;
     cam.drift += ((busy ? 0 : 1) - cam.drift) * (1 - Math.exp(-dt * (busy ? 5 : .45)));
@@ -1462,13 +1491,35 @@
     if (cam.yaw > 6.2832 || cam.yaw < -6.2832) cam.yaw %= 6.2832;
     // 鼠标：头部随指针微微转向并平移（触屏不用，免得与拖动冲突）
     const fx = COARSE ? 0 : (px.x - W * .5) / mn, fy = COARSE ? 0 : (py.x - H * .5) / mn;
-    const yawV = cam.yaw - fx * .30, pitchV = cam.pitch + fy * .22;
-    const rollV = .09 * Math.sin(t * .05 + 1.3) - cam.vy * .015;   // 慢滚转 + 滚轮旋转 + 甩动时轻微倾侧
+    // —— 机身质量：目标朝向交给一个略欠阻尼的弹簧去追。拖动时跟手，甩得越猛、停下时越会「过冲再回稳」 ——
+    if (!cam.ok) { cam.ok = true; cam.ys = cam.yaw; cam.ps = cam.pitch; }
+    const ssm = (a, b, x) => { const u = Math.max(0, Math.min(1, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+    cam.pk = Math.max(Math.hypot(cam.vy, cam.vp), cam.pk * Math.exp(-dt * 1.4));            // 近期峰值角速度
+    const wS = ssm(.5, 3.2, cam.pk);
+    const om = RM ? 30 : (drg.active ? 44 : 18 - 3 * wS), zt = RM ? 1 : (drg.active ? .92 : 1 - .30 * wS);
+    const wrapA = d => d - 6.283185307 * Math.round(d / 6.283185307);
+    for (let rem = dt; rem > 1e-6;) {
+      const h = Math.min(rem, 1 / 150); rem -= h;
+      cam.yvS += (om * om * wrapA(cam.yaw - cam.ys) - 2 * zt * om * cam.yvS) * h;
+      cam.pvS += (om * om * (cam.pitch - cam.ps) - 2 * zt * om * cam.pvS) * h;
+      cam.ys += cam.yvS * h; cam.ps += cam.pvS * h;
+    }
+    cam.ps = Math.max(-1.42, Math.min(1.42, cam.ps));
+    const spdS = Math.hypot(cam.yvS, cam.pvS);
+    // —— 手持呼吸感：几条互质频率的极小摆动，动得越多越明显 ——
+    const sa = RM ? 0 : .0011 * (1 + .9 * Math.min(spdS, 2));
+    const shY = sa * (.62 * Math.sin(t * 1.9 + .7) + .27 * Math.sin(t * 3.4 + 2.9) + .45 * Math.sin(t * .77 + 5.1));
+    const shP = sa * (.55 * Math.sin(t * 1.6 + 3.3) + .30 * Math.sin(t * 3.9 + 1.2) + .45 * Math.sin(t * .91 + .4));
+    const shR = sa * .5 * (Math.sin(t * 1.3 + 2.2) + .5 * Math.sin(t * 2.9));
+    cam.bank += ((RM ? 0 : -Math.max(-5, Math.min(5, cam.yvS)) * .014) - cam.bank) * (1 - Math.exp(-dt * 7));   // 转得快，机身顺势倾侧，慢慢扶正
+    const yawV = cam.ys - fx * .30 + shY, pitchV = cam.ps + fy * .22 + shP;
+    const rollV = .09 * Math.sin(t * .05 + 1.3) + cam.bank + shR;   // 慢滚转 + 滚轮旋转 + 甩动时轻微倾侧
     cam.roll = rollV;
     // 视场：滚轮推拉 + 呼吸开合 + 转得快时轻微拉伸
     const angSp = Math.min(Math.hypot(yawV - cam.pyaw, pitchV - cam.ppitch) / Math.max(dt, 1e-3), 4);
     cam.ang += (angSp - cam.ang) * (1 - Math.exp(-dt * 6));
-    cam.foc = .62 * Math.exp(-(RM ? .12 : .15) * tun.rush) * (1 - (RM ? .01 : .035) * tun.kick) * (1 - .06 * (breath - .5)) * (1 - .035 * Math.min(cam.ang / 2, 1));
+    { const aT = RM ? 0 : ssm(.35, 3, cam.ang); cam.fo += (aT - cam.fo) * (1 - Math.exp(-dt * (aT > cam.fo ? 9 : 2.3))); }   // 甩动时迅速失焦，停下后「对焦」缓缓回来
+    cam.foc = .62 * Math.exp(-(RM ? .12 : .15) * tun.rush) * (1 - (RM ? .01 : .035) * tun.kick) * (1 - .06 * (breath - .5)) * (1 - .035 * Math.min(cam.ang / 2, 1)) * (1 - .014 * cam.fo);   // 对焦呼吸：失焦时视角略收
     // 滚轮的「俯仰」也并入镜头
     const pitchW = 0;   // 缩放不再带动俯仰
     // 陀螺仪平滑
@@ -1487,10 +1538,15 @@
     cposBuf[0] = .22 * Math.sin(t * .13) + fx * .26;
     cposBuf[1] = .16 * Math.cos(t * .17) - fy * .20;
     cposBuf[2] = -.5 * cam.dolly;
+    if (!RM) { const arm = .28; cposBuf[0] -= arm * camBuf[6]; cposBuf[1] -= arm * camBuf[7]; cposBuf[2] -= arm * (camBuf[8] - 1); }   // 转轴在镜头后方：转动时镜头真的被带着划了一道弧，近远层产生视差
     const mx = cam.foc * (yawV - cam.pyaw), my = -cam.foc * (pitchV - cam.ppitch), cr2 = Math.cos(rollV), sr2 = Math.sin(rollV);
     const shx = mx * cr2 + my * sr2, shy = -mx * sr2 + my * cr2;
     cam.pyaw = yawV; cam.ppitch = pitchV;
-    return {shx, shy, fb: Math.min(.30, .30 * Math.pow(Math.min(cam.ang / 1.4, 1), 2))};
+    const ivd = 1 / Math.max(dt, 1e-3), kmb = 1 - Math.exp(-dt * 28);
+    let mbX = RM ? 0 : shx * ivd * .021, mbY = RM ? 0 : shy * ivd * .021;   // 快门 ≈ 1/48 秒：速度 × 曝光时间 = 拖影长度
+    const mbl = Math.hypot(mbX, mbY); if (mbl > .22) { mbX *= .22 / mbl; mbY *= .22 / mbl; }
+    cam.mbx += (mbX - cam.mbx) * kmb; cam.mby += (mbY - cam.mby) * kmb;
+    return {shx, shy, fb: Math.min(.30, .30 * Math.pow(Math.min(cam.ang / 1.4, 1), 2)), mbx: cam.mbx, mby: cam.mby, fo: cam.fo};
   }
 
   // ============ 载入音乐 · 胶囊 UI：折叠成一枚光环，悬停 / 点按时舒展 ============
@@ -1930,6 +1986,7 @@
     gl.uniform2f(UP.u_pole, poleX, poleY); gl.uniform1f(UP.u_zb, (tun.rush * (RM ? .075 : .10) + (tun.sv >= 0 ? 1 : -1) * tun.kick * (RM ? 0 : .01)) * TUN_E * (.4 + .6 * pvJ));
     gl.uniform1f(UP.u_fade, fade * fade * (3 - 2 * fade));
     gl.uniform3fv(UP.u_emC, emC);
+    gl.uniform2f(UP.u_mb, cs.mbx, cs.mby); gl.uniform1f(UP.u_fo, cs.fo * .0035);
     gl.uniform4fv(UP.u_em, emBuf); gl.uniform1f(UP.u_base, postBase); gl.uniform1f(UP.u_mode, modeV); gl.uniform4fv(UP.u_cb, cb);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.useProgram(prog);
