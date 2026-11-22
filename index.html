@@ -1488,7 +1488,8 @@
     const k = 1 / (cam.foc * Math.min(innerWidth, innerHeight));              // 每像素对应的弧度：手指按住的那一点跟着手指走
     const ux = (e.clientX - drg.lx) * k, uy = (e.clientY - drg.ly) * k;
     const cr = Math.cos(cam.roll), sr = Math.sin(cam.roll);
-    const dx = ux * cr + uy * sr, dy = uy * cr - ux * sr;                     // 屏幕方向 → 偏航/俯仰方向：镜头有滚转时，手指往哪滑，画面就往哪走
+    const flip = Math.cos(cam.pitch) < 0 ? -1 : 1;                           // 翻过头顶/脚下后画面是倒置的，水平拖动要反向才跟手
+    const dx = (ux * cr + uy * sr) * flip, dy = uy * cr - ux * sr;                     // 屏幕方向 → 偏航/俯仰方向：镜头有滚转时，手指往哪滑，画面就往哪走
     const dt = Math.max(.008, (e.timeStamp - drg.lt) / 1000);
     cam.pendY += dx; cam.pendP += dy;
     cam.vy += (Math.max(-6, Math.min(6, dx / dt)) - cam.vy) * .4;
@@ -1562,7 +1563,7 @@
     const w1 = .045, w2 = .11, w3 = .06, w4 = .17;
     cam.yaw   += (.95 * w1 * Math.cos(w1 * t) + .30 * w2 * Math.cos(w2 * t + 2.)) * dt * cam.drift * 2.2;
     cam.pitch += (.32 * w3 * Math.cos(w3 * t + .7) + .10 * w4 * Math.cos(w4 * t)) * dt * cam.drift * 2.2 - cam.pitch * .06 * dt * cam.drift;
-    cam.pitch = Math.max(-1.35, Math.min(1.35, cam.pitch));
+    cam.pitch -= 6.283185307 * Math.round(cam.pitch / 6.283185307);   // 俯仰不再限位：可以一直翻过天顶/天底，绕一整圈
     if (cam.yaw > 6.2832 || cam.yaw < -6.2832) cam.yaw %= 6.2832;
     // 鼠标：头部随指针微微转向并平移（触屏不用，免得与拖动冲突）
     const fx = COARSE ? 0 : (px.x - W * .5) / mn, fy = COARSE ? 0 : (py.x - H * .5) / mn;
@@ -1576,11 +1577,10 @@
     for (let rem = dt; rem > 1e-6;) {
       const h = Math.min(rem, 1 / 150); rem -= h;
       cam.yvS += (om * om * wrapA(cam.yaw - cam.ys) - 2 * zt * om * cam.yvS) * h;
-      cam.pvS += (om * om * (cam.pitch - cam.ps) - 2 * zt * om * cam.pvS) * h;
+      cam.pvS += (om * om * wrapA(cam.pitch - cam.ps) - 2 * zt * om * cam.pvS) * h;
       cam.ys += cam.yvS * h; cam.ps += cam.pvS * h;
     }
-    cam.ps = Math.max(-1.42, Math.min(1.42, cam.ps));
-    const spdS = Math.hypot(cam.yvS, cam.pvS);
+        const spdS = Math.hypot(cam.yvS, cam.pvS);
     // —— 手持呼吸感：几条互质频率的极小摆动，动得越多越明显 ——
     const sa = RM ? 0 : .0011 * (1 + .9 * Math.min(spdS, 2));
     const shY = sa * (.62 * Math.sin(t * 1.9 + .7) + .27 * Math.sin(t * 3.4 + 2.9) + .45 * Math.sin(t * .77 + 5.1));
